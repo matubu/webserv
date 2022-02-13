@@ -67,7 +67,7 @@
 <body>
 	<header>
 		<h1>WebServ</h1>
-		<span class="dim">autoindex</span>
+		<span class="dim" id="path"></span>
 	</header>
 
 	<main>
@@ -94,7 +94,7 @@
 		</nav>
 	</footer>
 	<script>
-		
+		document.querySelector('#path').textContent = location.pathname
 		for (let file of [...document.querySelector("main").children])
 		{
 			let svg = '<svg viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m5 2H6v16h12v-9h-7V4z" fill="#42a5f5"/></svg>'
@@ -114,7 +114,7 @@
 				svg = '<svg viewBox="0 0 24 24"><path d="M3 3h18v18H3V3m4.73 15.04c.4.85 1.19 1.55 2.54 1.55 1.5 0 2.53-.8 2.53-2.55v-5.78h-1.7V17c0 .86-.35 1.08-.9 1.08-.58 0-.82-.4-1.09-.87l-1.38.83m5.98-.18c.5.98 1.51 1.73 3.09 1.73 1.6 0 2.8-.83 2.8-2.36 0-1.41-.81-2.04-2.25-2.66l-.42-.18c-.73-.31-1.04-.52-1.04-1.02 0-.41.31-.73.81-.73.48 0 .8.21 1.09.73l1.31-.87c-.55-.96-1.33-1.33-2.4-1.33-1.51 0-2.48.96-2.48 2.23 0 1.38.81 2.03 2.03 2.55l.42.18c.78.34 1.24.55 1.24 1.13 0 .48-.45.83-1.15.83-.83 0-1.31-.43-1.67-1.03l-1.38.8z" fill="#ffca28"/></svg>'
 			else if (/\.(wasm|was?t)$/.test(file.href))
 				svg = '<svg viewBox="0 0 300 300"><g><g fill="#7c4dff"><path fill="#7c4dff" d="m177.3 67.39-3.11 13.99h9.68l-3.57-13.99z" transform="translate(-188.25 29.65) scale(2.2365)"/><path transform="translate(-188.72 29.65) scale(2.2365)" d="M163.77 0a5.62 5.62 0 0 1 0 .58 12.34 12.34 0 0 1-12.34 12.34A12.33 12.33 0 0 1 139.11.58a5.62 5.62 0 0 1 0-.58H97.64v107.62h107.62V0zM149 96.1l-5.25-25.93h-.09L138 96.1h-7.22L122.6 58h7.13l4.88 25.94h.09L140.58 58h6.67l5.28 26.26h.1L158.19 58h7l-9.09 38.1zm39.26 0-2.43-8.48H173l-1.87 8.48H164l9.22-38.1h11.25l11.21 38.1z" fill="#7c4dff"/></g></g></svg>'
-			file.children[0].children[0].innerHTML = svg;
+			file.children[0].children[0].innerHTML = svg
 		}
 	</script>
 </body>

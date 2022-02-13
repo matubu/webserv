@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include <fcntl.h>
 #include <dirent.h>
+#include <signal.h>
 
 #ifdef __APPLE__
 # include <sys/socket.h>
