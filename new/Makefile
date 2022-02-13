@@ -10,21 +10,21 @@ BLU	:=	\033[1;34m
 EOC	:=	\033[0m
 
 bin/%.o: src/%.cpp
-	@echo "$(BLU)● Compiling $^ 🔧$(EOC)"
+	@echo -e "$(BLU)● Compiling $^ 🔧$(EOC)"
 	@mkdir -p bin
 	@clang++ $(FLAG) -c $^ -o $@
 all: $(NAME)
 $(NAME): $(OBJS)
-	@echo "$(GRE)● Compiling $(NAME) ⚙️ $(EOC)"
+	@echo -e "$(GRE)● Compiling $(NAME) ⚙️ $(EOC)"
 	@clang++ $(FLAG) $(OBJS) -o $(NAME)
-	@echo "$(GRE)● done. ✅ $(EOC)"
+	@echo -e "$(GRE)● done. ✅ $(EOC)"
 run: all
 	./$(NAME)
 clean:
-	@echo "$(RED)● Removing objects 📁$(EOC)"
+	@echo -e "$(RED)● Removing objects 📁$(EOC)"
 	@rm -rf bin
 fclean: clean
-	@echo "$(RED)● Removing binary ⚙️ $(EOC)"
+	@echo -e "$(RED)● Removing binary ⚙️ $(EOC)"
 	@rm -rf $(NAME)
 re: fclean all
 
