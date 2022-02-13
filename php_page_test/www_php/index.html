@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="style.css">
+	<title>Test form</title>
+</head>
+<body>
+	<form action="form.php">
+		<input type="text" name="test" placeholder="enter texte here">
+		<input type="submit" formmethod="GET" value="GET">
+		<input type="submit" formmethod="post" value="POST">
+	</form>
+	<form action="form.php" method="post" enctype="multipart/form-data">
+		<input type="file" name="userfile">
+		<input type="submit" value="Upload" name="submit">
+	</form>
+	<p> Exemple requeste DELETE </p>
+		<code><pre>
+DELETE /echo/delete/json HTTP/1.1
+Authorization: Bearer mt0dgHmLJMVQhvjpNXDyA83vA_PxH23Y
+Accept: application/json
+Content-Type: application/json
+Content-Length: 19
+Host: reqbin.com
+		</pre></code>
+
+		<a href="/index.html" download>Download this page flags downloads</a>
+		<br>
+		<a href="/index.html.zip">Download this page in zip not flags downloads</a>
+</body>
+</html>

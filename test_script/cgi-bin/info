@@ -1,0 +1,9 @@
+test using python webserv: python3 -m http.server --cgi
+
+or simply run ./cgitest.py
+
+
+
+to test save_file.py
+
+curl -F "uploaded_file=@FILENAME" localhost:8000/cgi-bin/save_file.py
