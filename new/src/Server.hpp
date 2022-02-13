@@ -38,6 +38,7 @@ void sendf(int new_sock, const std::string &path, struct stat &info)
 
 class	Server {
 	public:
+	int								sock;
 	int								port;
 	in_addr_t						host;
 	std::set<std::string>			name;
@@ -114,6 +115,13 @@ class	Server {
 		return (Response(404, error.count(404) && exist(error[404], &info) ? error[404] : DEFAULT_404_FILE, NULL));
 	}
 
+	void	closeSocket()
+	{
+		info("closing socket");
+		close(sock);
+		info("socket closed");
+	}
+
 	#define SERVER_ERROR(msg) { \
 		server->perr(msg); \
 		return (NULL); \
@@ -124,7 +132,7 @@ class	Server {
 	{
 		server->info("starting ...");
 
-		int					sock, new_sock;
+		int					new_sock;
 		struct sockaddr_in	addr;
 		socklen_t			addrlen = sizeof(addr);
 		int	opt = 1;
@@ -134,12 +142,12 @@ class	Server {
 		addr.sin_port = htons(server->port);
 
 		/*** SETUP ***/
-		if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+		if ((server->sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 			SERVER_ERROR("cannot create socket");
-		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-		if (bind(sock, (struct sockaddr *) &addr, sizeof(addr)) < 0)
+		setsockopt(server->sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+		if (bind(server->sock, (struct sockaddr *) &addr, sizeof(addr)) < 0)
 			SERVER_ERROR("cannot bind");
-		if (listen(sock, 10) < 0)
+		if (listen(server->sock, 10) < 0)
 			SERVER_ERROR("cannot listen");
 
 		server->info("started");
@@ -147,7 +155,7 @@ class	Server {
 		while (1) {
 			try {
 				/*** ACCEPT ***/
-				if ((new_sock = accept(sock, (struct sockaddr *) &addr, &addrlen)) < 0)
+				if ((new_sock = accept(server->sock, (struct sockaddr *) &addr, &addrlen)) < 0)
 				{
 					server->perr(ENDL "cannot accept client");
 					continue ;
@@ -191,6 +199,7 @@ class	Server {
 						{
 							struct stat	info;
 							char		date[128];
+							if (!strcmp(diread->d_name, ".")) continue ;
 							stat((res.path + "/" + diread->d_name).c_str(), &info);
 							strftime(date, 128, "%d %h %Y", localtime(&info.st_ctime));
 
