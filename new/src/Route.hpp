@@ -25,7 +25,7 @@ class	Route {
 	{ root = urlsanitizer(_root); }
 
 	void	setCgi(const std::string &_ext, const std::string &_path)
-	{ cgi[_ext] = _path; }
+	{ cgi[_ext] = _path.substr(_path.find_first_not_of('.')); }
 
 	void	setMethod(const std::string &_method)
 	{ isIn(strtolower(_method), 3, "get", "post", "delete") ? method.push_back(strtolower(_method)) : throw "invalid method"; }

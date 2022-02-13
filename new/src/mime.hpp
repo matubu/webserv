@@ -1,6 +1,7 @@
 #pragma once
 
-#include "utils.hpp"
+#include <string>
+#include <map>
 
 typedef std::map<std::string, const char *> mime_map_t;
 

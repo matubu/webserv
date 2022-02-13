@@ -18,6 +18,8 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <signal.h>
+#include <algorithm>
+#include "mime.hpp"
 
 #ifdef __APPLE__
 # include <sys/socket.h>
@@ -197,34 +199,50 @@ std::string	readable_fsize(size_t size)
 	return (ss.str());
 }
 
-void replace(std::string & str, const std::string & search, const std::string & replace)
+std::string headers(const std::string &code, size_t len, const std::string &type)
 {
-	int pos;
-
-	while (1)
-	{
-		pos = str.find(search);
-		if (pos >= 0)
-		{
-			str.erase(pos, search.length());
-			str.insert(pos, replace);
-		}
-		else
-			break;
-	}
+	return ("HTTP/1.1 " + code + "\r\nContent-length: " + atos(len) + "\r\nContent-Type: " + type + "\r\n\r\n");
 }
 
-std::string errorpage(std::string code, std::string name_error)
+void errorpage(const std::string &code, const std::string &name, int sock)
 {
 	std::ifstream			ifs;
 	std::string				line, file;
 
 	ifs.open(DEFAULT_ERROR_FILE);
 	while (std::getline(ifs, line))
+		file += replaceAll(replaceAll(line,
+				"$NAME", name),
+				"$CODE", code);
+	file = headers(code, file.size(), "text/html") + file;
+	send(sock, file.c_str(), file.size(), 0);
+}
+
+void sendf(int new_sock, const std::string &path, struct stat &info)
+{
+	std::string header = headers("200 OK", info.st_size, mime(path));
+	send(new_sock, header.c_str(), header.size(), 0);
+	int fd = open(path.c_str(), O_RDONLY);
+	#ifdef __APPLE__
+		struct sf_hdtr	hdtr = { NULL, 0, NULL, 0 };
+		off_t len = 0;
+		sendfile(new_sock, fd, 0, &len, &hdtr, 0);
+	#else
+		long int off = 0;
+		while (sendfile(new_sock, fd, &off, SENDFILE_BUF))
+			;
+	#endif
+	close(fd);
+}
+
+std::string whichCgi(std::map<std::string, std::string> cgi, std::string file)
+{
+	std::map<std::string, std::string>::iterator	it;
+
+	for (it = cgi.begin(); it != cgi.end(); it++)
 	{
-		replace(line, "{{$error}}", code);
-		replace(line, "{{$error_name}}", name_error);
-		file += line;
+		if (endwith(file, it->first))
+			return (it->second);
 	}
-	return (file);
+	return ("");
 }

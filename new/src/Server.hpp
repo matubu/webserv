@@ -3,42 +3,12 @@
 #include "Route.hpp"
 #include "Request.hpp"
 #include "Response.hpp"
-#include "mime.hpp"
+#include "Context.hpp"
 #include "utils.hpp"
-
-#define E(code) { \
-	server->info("E" # code); \
-	if (send(new_sock, # code, 3, 0) == -1) \
-		server->perr("send " # code); \
-	close(new_sock); \
-	continue ; \
-}
-
-std::string headers(const std::string &code, size_t len, const std::string &type)
-{
-	return ("HTTP/1.1 " + code + "\r\nContent-length: " + atos(len) + "\r\nContent-Type: " + type + "\r\n");
-}
-
-void sendf(int new_sock, const std::string &path, struct stat &info)
-{
-	std::string header = headers("200 OK", info.st_size, mime(path)) + "\r\n";
-	send(new_sock, header.c_str(), header.size(), 0);
-	int fd = open(path.c_str(), O_RDONLY);
-	#ifdef __APPLE__
-		struct sf_hdtr	hdtr = { NULL, 0, NULL, 0 };
-		off_t len = 0;
-		sendfile(new_sock, fd, 0, &len, &hdtr, 0);
-	#else
-		long int off = 0;
-		while (sendfile(new_sock, fd, &off, SENDFILE_BUF))
-			;
-	#endif
-	close(fd);
-}
+#include <sys/select.h>
 
 class	Server {
 	public:
-	int								sock;
 	int								port;
 	in_addr_t						host;
 	std::set<std::string>			name;
@@ -100,7 +70,7 @@ class	Server {
 			size_t idx = url.find_last_of('/', url.size() - 2);
 			save = url.substr(idx, url.size() - idx - 1) + save;
 			url = url.substr(0, idx + 1);
-			std::cout <<url << " " << save << ENDL;
+			std::cout << url << " " << save << ENDL;
 			if (routes.count(url))
 			{
 				std::string file = popchar(routes[url].root) + save;
@@ -117,130 +87,224 @@ class	Server {
 		return (Response(404, "", NULL));
 	}
 
-	void	closeSocket()
-	{
-		info("closing socket");
-		close(sock);
-		info("socket closed");
-	}
-
 	#define SERVER_ERROR(msg) { \
 		server->perr(msg); \
 		return (NULL); \
-	} 
+	}
+
+	int accept_new_client(int fd)
+	{
+		/*** ACCEPT ***/
+		int				new_sock;
+		struct sockaddr	client_addr;
+		socklen_t		client_len = sizeof(client_addr);
+
+	
+		if ((new_sock = accept(fd, (struct sockaddr *) &client_addr, &client_len)) < 0)
+		{
+			perr(ENDL "cannot accept client");
+			return (-1);
+		}
+		return (new_sock);
+
+	}
+
+	void respond_client(int fd, const Context &ctx)
+	{
+		/*** PARSE ***/
+		Request req(ctx);
+
+		std::cout << "request: " << ctx.plain << std::endl;
+
+		/*** FINDING ROUTE ***/
+		Response res = match(req.url);
+
+		info(RED "route found " + res.path);
+
+		/*** CGI ***/
+		bool pascontent = true;
+		std::string cgi = whichCgi(res.routes.cgi, res.path);
+		if (!cgi.empty())
+		{
+			int pipefd[2];
+			pipe(pipefd);
+
+			if (fork() == 0)
+			{
+				close(pipefd[0]);
+
+				dup2(pipefd[1], 1);
+				dup2(pipefd[1], 2);
+
+				close(pipefd[1]);
+
+				if (execve(cgi, res.path, NULL) == -1)
+				{
+					webserv::perror("execve()");
+					exit(errno);
+				}
+			}
+			else
+			{
+				char c;
+
+				close(pipefd[1]);
+				std::string line;
+				std::string send;
+				int n = 1;
+				while (n)
+				{
+					while ((n = read(pipefd[0], &c, 1)) != 0)
+					{
+						line += c;
+						if (c == '\n')
+							break ;
+					}
+					if (line.substr(0, 7) == "Status:")
+					{
+						std::string error = line.substr(8);
+						std::vector<std::string> e = split(error, " ");
+						errorpage(e[0], e[1], fd);
+						pascontent = false;
+					}
+					if (line.empty())
+						continue ;
+					webserv::log(line);
+					send += line;
+					line.clear();
+				}
+				send = headers("200 OK", send.size(), "text/html") + "\r\n" + send;
+				send(fd, send.c_str(), send.size(), 0);
+			}
+		}
+
+		if (!pascontent)
+			return ;
+
+		/*** SEND ***/
+		struct stat	info;
+		if (stat(res.path.c_str(), &info) == -1 || res.path.empty())
+			errorpage("404", "Not Found", fd);
+		else if (info.st_mode & S_IFDIR)
+		{
+			if (res.route && res.route->autoindex)
+			{
+				DIR				*dir;
+				struct dirent	*diread;
+				std::string		file = ftos(AUTOINDEX_TEMPLATE_FILE);
+				size_t			start = file.find("{{"), end = file.find("}}");
+				std::string		s = file.substr(0, start);
+				std::string		pattern = file.substr(start + 2, end - start - 2);
+
+				if ((dir = opendir(res.path.c_str())) == NULL)
+					errorpage("403", "Forbidden", fd);
+				while ((diread = readdir(dir)))
+				{
+					struct stat	info;
+					char		date[128];
+
+					if (!strcmp(diread->d_name, ".") || !strcmp(diread->d_name, "..")) continue ;
+					stat((res.path + "/" + diread->d_name).c_str(), &info);
+					strftime(date, 128, "%d %h %Y", localtime(&info.st_ctime));
+
+					s += replaceAll(replaceAll(replaceAll(replaceAll(replaceAll(pattern,
+								"$NAME", diread->d_name),
+								"$URL", req.url + diread->d_name),
+								"$DATE", std::string(date)),
+								"$SIZE", readable_fsize(info.st_size)),
+								"$ISDIR", info.st_mode & S_IFDIR ? "1" : "");
+				}
+				s += file.substr(end + 2);
+				s = headers("200 OK", s.size(), "text/html") + "\r\n" + s;
+				send(fd, s.c_str(), s.size(), 0);
+			}
+			else
+				errorpage("403", "Forbidden", fd);
+		}
+		else
+			sendf(fd, res.path, info);
+	}
 
 	/*** START ***/
 	static void	*start(Server *server)
 	{
 		server->info("starting ...");
 
-		int					new_sock;
-		struct sockaddr_in	addr;
-		socklen_t			addrlen = sizeof(addr);
-		int	opt = 1;
+		int					sock;
+		struct				sockaddr_in	addr;
+		int					opt = 1;
+		std::map<int, Context>	ctx;
+		char	*buf;
 
 		addr.sin_family = AF_INET;
 		addr.sin_addr.s_addr = server->host;
 		addr.sin_port = htons(server->port);
 
 		/*** SETUP ***/
-		if ((server->sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+		if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 			SERVER_ERROR("cannot create socket");
-		setsockopt(server->sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-		if (bind(server->sock, (struct sockaddr *) &addr, sizeof(addr)) < 0)
+		// fcntl(sock, F_SETFL, O_NONBLOCK);
+		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+		if (bind(sock, (struct sockaddr *) &addr, sizeof(addr)) < 0)
 			SERVER_ERROR("cannot bind");
-		if (listen(server->sock, 10) < 0)
+		if (listen(sock, 10) < 0)
 			SERVER_ERROR("cannot listen");
 
 		server->info("started");
 
+		fd_set	read_fds, readable_fds;
+		FD_ZERO(&read_fds);
+		FD_SET(sock, &read_fds);
+		int		max_fd = sock + 1;
+
+		buf = new char[server->body_size + 1];
+
 		while (1) {
-			try {
-				/*** ACCEPT ***/
-				if ((new_sock = accept(server->sock, (struct sockaddr *) &addr, &addrlen)) < 0)
-				{
-					server->perr(ENDL "cannot accept client");
+			readable_fds = read_fds;
+
+			select(max_fd, &readable_fds, NULL, NULL, NULL);
+
+			for (int fd = 0; fd < max_fd; ++fd)
+			{
+				if (!FD_ISSET(fd, &readable_fds))
 					continue ;
-				}
-
-				server->info("parsing request");
-
-				/*** PARSE ***/
-				Request req(new_sock, server->body_size);
-				std::cout << RED << req.type << GRE " " << req.url << BLU " " << req.protocol << ENDL;
-
-				/*** FINDING ROUTE ***/
-				Response res = server->match(req.url);
-
-				server->info(RED "route found " + res.path);
-
-				/*** CGI ***/
-				//if (path == cgi)
-				//	cgi();
-				//else
-				//	senf();
-
-				/*** SEND ***/
-				struct stat	info;
-				if (res.path.empty())
+				if (fd == sock)
 				{
-					std::string s = errorpage("404", "File not found");
-					s = headers("404 File not found", s.size(), "text/html") + "\r\n" + s;
-					send(new_sock, s.c_str(), s.size(), 0);
-				}
-				else if (info.st_mode & S_IFDIR)
-				{
-					if (res.route && res.route->autoindex)
-					{
-						DIR				*dir;
-						struct dirent	*diread;
-						std::string		file = ftos(AUTOINDEX_TEMPLATE_FILE);
-						size_t			start = file.find("{{"), end = file.find("}}");
-						std::string		s = file.substr(0, start);
-						std::string		pattern = file.substr(start + 2, end - start - 2);
-
-						if ((dir = opendir(res.path.c_str())) == NULL)
-							E(403);
-						while ((diread = readdir(dir)))
-						{
-							struct stat	info;
-							char		date[128];
-							if (!strcmp(diread->d_name, ".")) continue ;
-							stat((res.path + "/" + diread->d_name).c_str(), &info);
-							strftime(date, 128, "%d %h %Y", localtime(&info.st_ctime));
-
-							s += replaceAll(replaceAll(replaceAll(replaceAll(replaceAll(pattern,
-										"$NAME", diread->d_name),
-										"$URL", req.url + diread->d_name),
-										"$DATE", std::string(date)),
-										"$SIZE", readable_fsize(info.st_size)),
-										"$ISDIR", info.st_mode & S_IFDIR ? "1" : "");
-						}
-						s += file.substr(end + 2);
-						s = headers("200 OK", s.size(), "text/html") + "\r\n" + s;
-						send(new_sock, s.c_str(), s.size(), 0);
-					}
-					else
-					{
-						std::string s = errorpage("404", "Forbidden");
-						s = headers("403 Forbidden", s.size(), "text/html") + "\r\n" + s;
-						send(new_sock, s.c_str(), s.size(), 0);
-					}
+					int new_client_fd = server->accept_new_client(sock);
+					
+					max_fd = std::max(max_fd, new_client_fd + 1);
+					FD_SET(new_client_fd, &read_fds);
+					// printf("server: %d Joined :)\n", new_client_fd);
+					// send_message(new_client_fd, &read_fds, "server: welcome :)\n");
 				}
 				else
-					sendf(new_sock, res.path, info);
+				{
+					try {
+						int ret = recv(fd, buf, server->body_size, 0);
+						if (ret == -1)
+							throw std::runtime_error("error recv");
+						buf[ret] = '\0';
+						const Context& cCtx = (ctx[fd] += std::string(buf));
+						if (cCtx.ended)
+						{
+							server->respond_client(fd, cCtx);
+							close(fd);
+						}
+					}
+					catch (std::exception &e)
+					{
+						errorpage("500", "Internal Server Error", fd);
+						close(fd);
+					}
+					// if (something)
+					// 	FD_CLR(i, &read_fds);
+				}
+			}
 
-				/*** CLOSE ***/
-				close(new_sock);
-			}
-			catch (const std::exception &e)
-			{
-				std::string s = errorpage("404", "File not found");
-				s = headers("404 File not found", s.size(), "text/html") + "\r\n" + s;
-				send(new_sock, s.c_str(), s.size(), 0);
-				server->perr(e.what());
-			}
+			/*** CLOSE ***/
+			// close(new_sock);
 		}
+		delete [] buf;
 		return (NULL);
 	}
 };
