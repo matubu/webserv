@@ -25,7 +25,7 @@
 #endif
 
 #define DEFAULT_CONF "default.conf"
-#define DEFAULT_404_FILE "www/404.html"
+#define DEFAULT_ERROR_FILE "www/error.html"
 #define AUTOINDEX_TEMPLATE_FILE "www/autoindex.html"
 #define SENDFILE_BUF 2048
 #define READFILE_BUF 2048
@@ -194,4 +194,36 @@ std::string	readable_fsize(size_t size)
 		fsize /= 1024;
 	ss << fsize << units[i];
 	return (ss.str());
+}
+
+void replace(std::string & str, const std::string & search, const std::string & replace)
+{
+	int pos;
+
+	while (1)
+	{
+		pos = str.find(search);
+		if (pos >= 0)
+		{
+			str.erase(pos, search.length());
+			str.insert(pos, replace);
+		}
+		else
+			break;
+	}
+}
+
+std::string errorpage(std::string code, std::string name_error)
+{
+	std::ifstream			ifs;
+	std::string				line, file;
+
+	ifs.open(DEFAULT_ERROR_FILE);
+	while (std::getline(ifs, line))
+	{
+		replace(line, "{{$error}}", code);
+		replace(line, "{{$error_name}}", name_error);
+		file += line;
+	}
+	return (file);
 }

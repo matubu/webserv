@@ -111,7 +111,9 @@ class	Server {
 				break ;
 			}
 		} while (url != "/");
-		return (Response(404, error.count(404) && exist(error[404], &info) ? error[404] : DEFAULT_404_FILE, NULL));
+		if (error.count(404) && exist(error[404], &info))
+			return (Response(404, error[404], NULL));
+		return (Response(404, "", NULL));
 	}
 
 	#define SERVER_ERROR(msg) { \
@@ -172,8 +174,12 @@ class	Server {
 
 				/*** SEND ***/
 				struct stat	info;
-				if (stat(res.path.c_str(), &info) == -1)
-					E(404)
+				if (res.path.empty())
+				{
+					std::string s = errorpage("404", "File not found");
+					s = headers("404 File not found", s.size(), "text/html") + "\r\n" + s;
+					send(new_sock, s.c_str(), s.size(), 0);
+				}
 				else if (info.st_mode & S_IFDIR)
 				{
 					if (res.route && res.route->autoindex)
@@ -206,7 +212,11 @@ class	Server {
 						send(new_sock, s.c_str(), s.size(), 0);
 					}
 					else
-						E(403);
+					{
+						std::string s = errorpage("404", "Forbidden");
+						s = headers("403 Forbidden", s.size(), "text/html") + "\r\n" + s;
+						send(new_sock, s.c_str(), s.size(), 0);
+					}
 				}
 				else
 					sendf(new_sock, res.path, info);
@@ -216,8 +226,9 @@ class	Server {
 			}
 			catch (const std::exception &e)
 			{
-				// E500
-				E(500);
+				std::string s = errorpage("404", "File not found");
+				s = headers("404 File not found", s.size(), "text/html") + "\r\n" + s;
+				send(new_sock, s.c_str(), s.size(), 0);
 				server->perr(e.what());
 			}
 		}
