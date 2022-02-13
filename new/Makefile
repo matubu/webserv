@@ -9,22 +9,27 @@ GRA	:=	\033[1;37m
 BLU	:=	\033[1;34m
 EOC	:=	\033[0m
 
-bin/%.o: src/%.cpp
-	@echo -e "$(BLU)● Compiling $^ 🔧$(EOC)"
+HEADER_FILES 		= Autoindex.hpp
+FOLDER_HEADER		= src/
+
+HEADERS				= $(addprefix ${FOLDER_HEADER},${HEADER_FILES})
+
+bin/%.o: src/%.cpp ${HEADERS}
+	@printf "$(BLU)● Compiling $< 🔧$(EOC)\n"
 	@mkdir -p bin
-	@clang++ $(FLAG) -c $^ -o $@
+	@clang++ $(FLAG) -c $< -o $@
 all: $(NAME)
 $(NAME): $(OBJS)
-	@echo -e "$(GRE)● Compiling $(NAME) ⚙️ $(EOC)"
+	@printf "$(GRE)● Compiling $(NAME) ⚙️ $(EOC)\n"
 	@clang++ $(FLAG) $(OBJS) -o $(NAME)
-	@echo -e "$(GRE)● done. ✅ $(EOC)"
+	@printf "$(GRE)● done. ✅ $(EOC)\n"
 run: all
 	./$(NAME)
 clean:
-	@echo -e "$(RED)● Removing objects 📁$(EOC)"
+	@printf "$(RED)● Removing objects 📁$(EOC)\n"
 	@rm -rf bin
 fclean: clean
-	@echo -e "$(RED)● Removing binary ⚙️ $(EOC)"
+	@printf "$(RED)● Removing binary ⚙️ $(EOC)\n"
 	@rm -rf $(NAME)
 re: fclean all
 
