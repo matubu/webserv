@@ -9,7 +9,15 @@ GRA	:=	\033[1;37m
 BLU	:=	\033[1;34m
 EOC	:=	\033[0m
 
-HEADER_FILES 		= Autoindex.hpp
+HEADER_FILES 		= Autoindex.hpp \
+						Config.hpp \
+						ErrorPage.hpp \
+						mime.hpp \
+						Request.hpp \
+						Response.hpp \
+						Route.hpp \
+						Server.hpp \
+						utils.hpp
 FOLDER_HEADER		= src/
 
 HEADERS				= $(addprefix ${FOLDER_HEADER},${HEADER_FILES})
