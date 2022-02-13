@@ -17,7 +17,6 @@
 #include <stdexcept>
 #include <fcntl.h>
 #include <dirent.h>
-#include <cstdarg>
 
 #ifdef __APPLE__
 # include <sys/socket.h>
@@ -25,7 +24,7 @@
 # include <sys/sendfile.h>
 #endif
 
-#define DEFAULT_CONF "../conf.d/default.conf"
+#define DEFAULT_CONF "default.conf"
 #define DEFAULT_404_FILE "www/404.html"
 #define AUTOINDEX_TEMPLATE_FILE "www/autoindex.html"
 #define SENDFILE_BUF 2048
@@ -195,9 +194,4 @@ std::string	readable_fsize(size_t size)
 		fsize /= 1024;
 	ss << fsize << units[i];
 	return (ss.str());
-}
-
-bool exist (const std::string & name) {
-	struct stat buffer;
-	return (stat(name.c_str(), &buffer) == 0); 
 }

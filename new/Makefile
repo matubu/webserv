@@ -9,20 +9,12 @@ GRA	:=	\033[1;37m
 BLU	:=	\033[1;34m
 EOC	:=	\033[0m
 
-HEADER_FILES 		= Autoindex.hpp \
-						Config.hpp \
-						ErrorPage.hpp \
-						mime.hpp \
-						Request.hpp \
-						Response.hpp \
-						Route.hpp \
-						Server.hpp \
-						utils.hpp
+HEADER_FILES 		= *.hpp
 FOLDER_HEADER		= src/
 
-HEADERS				= $(addprefix ${FOLDER_HEADER},${HEADER_FILES})
+HEADERS				= $(addprefix $(FOLDER_HEADER),$(HEADER_FILES))
 
-bin/%.o: src/%.cpp ${HEADERS}
+bin/%.o: src/%.cpp $(HEADERS)
 	@printf "$(BLU)● Compiling $< 🔧$(EOC)\n"
 	@mkdir -p bin
 	@clang++ $(FLAG) -c $< -o $@

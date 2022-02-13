@@ -15,7 +15,7 @@ class Request {
 	{
 		char	*buf = new char[body_size + 1];
 		int		ret = recv(sock, buf, body_size, 0);
-		if (ret == -1) throw "cannot recv";
+		if (ret == -1) throw std::runtime_error("cannot recv");
 
 		buf[ret] = '\0';
 		plain = std::string(buf);

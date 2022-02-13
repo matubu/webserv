@@ -5,8 +5,6 @@
 #include "Response.hpp"
 #include "mime.hpp"
 #include "utils.hpp"
-#include "ErrorPage.hpp"
-#include "Autoindex.hpp"
 
 #define E(code) { \
 	server->info("E" # code); \
@@ -90,61 +88,31 @@ class	Server {
 		}
 	}
 
-	// Response	match(std::string url)
-	// {
-	// 	struct stat info;
+	Response	match(std::string url)
+	{
+		struct stat info;
 
-	// 	if (routes.count(url) && exist(routes[url].root + routes[url].index, &info))
-	// 		return (Response(200, routes[url].root + routes[url].index, &routes[url]));
-	// 	std::string	save;
-	// 	do {
-	// 		size_t idx = url.find_last_of('/', url.size() - 2);
-	// 		save = url.substr(idx, url.size() - idx - 1) + save;
-	// 		url = url.substr(0, idx + 1);
-	// 		std::cout <<url << " " << save << ENDL;
-	// 		if (routes.count(url))
-	// 		{
-	// 			std::string file = popchar(routes[url].root) + save;
-	// 			std::cout << file << ENDL;
-	// 			if (exist(file + routes[url].index, &info))
-	// 				return (Response(200, file + routes[url].index, &routes[url]));
-	// 			if (exist(file, &info))
-	// 				return (Response(200, file, &routes[url]));
-	// 			break ;
-	// 		}
-	// 	} while (url != "/");
-	// 	return (Response(404, error.count(404) && exist(error[404], &info) ? error[404] : DEFAULT_404_FILE, NULL));
-	// }
-
-	std::string    match(std::string url, Route & route)
-    {
-        if (*(url.end()-1) != '/')
-            url += '/';
-
-        if (routes.count(url))
-        {
-			route = routes[url];
-            return (routes[url].root);
-        }
-        std::string save;
-        while (1)
-        {
-            std::vector<std::string> tmp = split(url, "/");
-            std::vector<std::string>::iterator it;
-            url.clear();
-            for (it = tmp.begin(); it != tmp.end() - 2; it++)
-                if (!(*it).empty())
-                    url += std::string("/" + *it);
-            url += '/';
-			save = "/" + *it + save;
-            if (routes.count(url))
-            {
-				route = routes[url];
-                std::string file = routes[url].root + save;
-                return (file);
-            }
-        }
-    }
+		if (routes.count(url) && exist(routes[url].root + routes[url].index, &info))
+			return (Response(200, routes[url].root + routes[url].index, &routes[url]));
+		std::string	save;
+		do {
+			size_t idx = url.find_last_of('/', url.size() - 2);
+			save = url.substr(idx, url.size() - idx - 1) + save;
+			url = url.substr(0, idx + 1);
+			std::cout <<url << " " << save << ENDL;
+			if (routes.count(url))
+			{
+				std::string file = popchar(routes[url].root) + save;
+				std::cout << file << ENDL;
+				if (exist(file + routes[url].index, &info))
+					return (Response(200, file + routes[url].index, &routes[url]));
+				if (exist(file, &info))
+					return (Response(200, file, &routes[url]));
+				break ;
+			}
+		} while (url != "/");
+		return (Response(404, error.count(404) && exist(error[404], &info) ? error[404] : DEFAULT_404_FILE, NULL));
+	}
 
 	#define SERVER_ERROR(msg) { \
 		server->perr(msg); \
@@ -192,39 +160,9 @@ class	Server {
 				std::cout << RED << req.type << GRE " " << req.url << BLU " " << req.protocol << ENDL;
 
 				/*** FINDING ROUTE ***/
-				// Response res = server->match(req.url);
+				Response res = server->match(req.url);
 
-				Route	return_routes;
-				std::string pointe = server->match(req.url, return_routes);
-				
-				if (exist(pointe + return_routes.index))
-				{
-					server->info(RED "Index file");
-					server->info(RED "route found " + pointe + return_routes.index);
-				}
-				else if (exist(pointe))
-				{
-					if (return_routes.autoindex)
-					{
-						server->info(RED "route found " + pointe);
-						server->info(RED "Autoindex on");
-						std::string s = Autoindex::page(pointe);
-						s = headers("200 OK", s.size(), "text/html") + "\r\n" + s;
-						send(new_sock, s.c_str(), s.size(), 0);
-					}
-					else
-					{
-						ErrorPage::page("403", "Forbiden Access");
-						server->info(RED "Autoindex off");
-					}
-				}
-				else
-				{
-					std::string s = ErrorPage::page("404", "Not Found");
-					server->info(RED "Page not found");
-					s = headers("404 Not Found", s.size(), "text/html") + "\r\n" + s;
-					send(new_sock, s.c_str(), s.size(), 0);
-				}
+				server->info(RED "route found " + res.path);
 
 				/*** CGI ***/
 				//if (path == cgi)
@@ -233,45 +171,45 @@ class	Server {
 				//	senf();
 
 				/*** SEND ***/
-				// struct stat	info;
-				// if (stat(res.path.c_str(), &info) == -1)
-				// 	E(404)
-				// else if (info.st_mode & S_IFDIR)
-				// {
-				// 	if (res.route && res.route->autoindex)
-				// 	{
-				// 		DIR				*dir;
-				// 		struct dirent	*diread;
-				// 		std::string		file = ftos(AUTOINDEX_TEMPLATE_FILE);
-				// 		size_t			start = file.find("{{"), end = file.find("}}");
-				// 		std::string		s = file.substr(0, start);
-				// 		std::string		pattern = file.substr(start + 2, end - start - 2);
+				struct stat	info;
+				if (stat(res.path.c_str(), &info) == -1)
+					E(404)
+				else if (info.st_mode & S_IFDIR)
+				{
+					if (res.route && res.route->autoindex)
+					{
+						DIR				*dir;
+						struct dirent	*diread;
+						std::string		file = ftos(AUTOINDEX_TEMPLATE_FILE);
+						size_t			start = file.find("{{"), end = file.find("}}");
+						std::string		s = file.substr(0, start);
+						std::string		pattern = file.substr(start + 2, end - start - 2);
 
-				// 		if ((dir = opendir(res.path.c_str())) == NULL)
-				// 			E(403);
-				// 		while ((diread = readdir(dir)))
-				// 		{
-				// 			struct stat	info;
-				// 			char		date[128];
-				// 			stat((res.path + "/" + diread->d_name).c_str(), &info);
-				// 			strftime(date, 128, "%d %h %Y", localtime(&info.st_ctime));
+						if ((dir = opendir(res.path.c_str())) == NULL)
+							E(403);
+						while ((diread = readdir(dir)))
+						{
+							struct stat	info;
+							char		date[128];
+							stat((res.path + "/" + diread->d_name).c_str(), &info);
+							strftime(date, 128, "%d %h %Y", localtime(&info.st_ctime));
 
-				// 			s += replaceAll(replaceAll(replaceAll(replaceAll(replaceAll(pattern,
-				// 						"$NAME", diread->d_name),
-				// 						"$URL", req.url + diread->d_name),
-				// 						"$DATE", std::string(date)),
-				// 						"$SIZE", readable_fsize(info.st_size)),
-				// 						"$ISDIR", info.st_mode & S_IFDIR ? "1" : "");
-				// 		}
-				// 		s += file.substr(end + 2);
-				// 		s = headers("200 OK", s.size(), "text/html") + "\r\n" + s;
-				// 		send(new_sock, s.c_str(), s.size(), 0);
-				// 	}
-				// 	else
-				// 		E(403);
-				// }
-				// else
-				// 	sendf(new_sock, res.path, info);
+							s += replaceAll(replaceAll(replaceAll(replaceAll(replaceAll(pattern,
+										"$NAME", diread->d_name),
+										"$URL", req.url + diread->d_name),
+										"$DATE", std::string(date)),
+										"$SIZE", readable_fsize(info.st_size)),
+										"$ISDIR", info.st_mode & S_IFDIR ? "1" : "");
+						}
+						s += file.substr(end + 2);
+						s = headers("200 OK", s.size(), "text/html") + "\r\n" + s;
+						send(new_sock, s.c_str(), s.size(), 0);
+					}
+					else
+						E(403);
+				}
+				else
+					sendf(new_sock, res.path, info);
 
 				/*** CLOSE ***/
 				close(new_sock);
