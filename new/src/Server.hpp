@@ -6,6 +6,7 @@
 #include "Context.hpp"
 #include "utils.hpp"
 #include <sys/select.h>
+#include <unistd.h>
 
 class	Server {
 	public:
@@ -123,7 +124,7 @@ class	Server {
 
 		/*** CGI ***/
 		bool pascontent = true;
-		std::string cgi = whichCgi(res.routes.cgi, res.path);
+		std::string cgi = whichCgi(routes["/"].cgi, res.path);
 		if (!cgi.empty())
 		{
 			int pipefd[2];
@@ -138,11 +139,15 @@ class	Server {
 
 				close(pipefd[1]);
 
-				if (execve(cgi, res.path, NULL) == -1)
+				char **tab = (char **)calloc(sizeof(char *), 3);
+				tab[0] = strdup(cgi.c_str());
+				tab[1] = strdup(res.path.c_str());
+				if (execve(cgi.c_str(), tab, NULL) == -1)
 				{
-					webserv::perror("execve()");
+					perror("execve()");
 					exit(errno);
 				}
+				return ;
 			}
 			else
 			{
@@ -150,7 +155,7 @@ class	Server {
 
 				close(pipefd[1]);
 				std::string line;
-				std::string send;
+				std::string s =  "HTTP/1.1 200 OK\r\n";
 				int n = 1;
 				while (n)
 				{
@@ -169,12 +174,11 @@ class	Server {
 					}
 					if (line.empty())
 						continue ;
-					webserv::log(line);
-					send += line;
+					s += line;
 					line.clear();
 				}
-				send = headers("200 OK", send.size(), "text/html") + "\r\n" + send;
-				send(fd, send.c_str(), send.size(), 0);
+				send(fd, s.c_str(), s.size(), 0);
+				return ;
 			}
 		}
 
@@ -289,6 +293,11 @@ class	Server {
 						{
 							server->respond_client(fd, cCtx);
 							close(fd);
+							/*
+								TODO
+								Always erase when closing client !!
+							*/
+							ctx.erase(fd);
 						}
 					}
 					catch (std::exception &e)
