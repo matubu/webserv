@@ -5,16 +5,14 @@
 
 class Request {
 	public:
-	const Context	&ctx;
-
 	std::string	request;
 	std::string	type;
 	std::string	url;
 	std::string	protocol;
 
-	Request(const Context &_ctx) : ctx(_ctx)
+	Request(const std::string &data)
 	{
-		std::stringstream	ss(_ctx.plain);
+		std::stringstream	ss(data);
 		std::getline(ss, request);
 		std::vector<std::string>	req = split(request);
 		if (req.size() != 3) throw std::runtime_error("invalid request");

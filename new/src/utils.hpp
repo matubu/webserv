@@ -19,6 +19,8 @@
 #include <dirent.h>
 #include <signal.h>
 #include <algorithm>
+#include <sys/ioctl.h>
+#include <sys/select.h>
 #include "mime.hpp"
 
 #ifdef __APPLE__
@@ -32,6 +34,7 @@
 #define AUTOINDEX_TEMPLATE_FILE "www/autoindex.html"
 #define SENDFILE_BUF 2048
 #define READFILE_BUF 2048
+#define MAX_CONNECTIONS 32
 
 #define EOC "\033[0m"    //reset
 #define ENDL EOC "\n"    //reset + endl
@@ -83,14 +86,8 @@ void	println(int fd, const std::string &s)
 	write(fd, o.c_str(), o.size());
 }
 
-/* Function to write format error in the config file */
-int	err(const char *filename, const int idx, const std::string &msg)
-{
-	println(2, std::string(RED "error: ") + filename + ":" + atos(idx) + ": " + msg);
-	exit(1);
-}
 /* Function to write system error such as open ... */
-int	perr(const std::string &msg, const std::string &reason = std::strerror(errno))
+int	syserr(const std::string &msg, const std::string &reason = std::strerror(errno))
 {
 	println(2, std::string(RED "error: ") + msg + ": " + reason);
 	exit(1);
@@ -106,9 +103,9 @@ bool	getline(int *idx, std::ifstream &f, std::string &ln)
 	return (true);
 }
 
-bool	scope(const char *filename, int *idx, std::ifstream &f, std::string &ln)
+bool	scope(int *idx, std::ifstream &f, std::string &ln)
 {
-	if (!getline(idx, f, ln)) err(filename, *idx, "unexpected eof");
+	if (!getline(idx, f, ln)) throw "unexpected eof";
 	return (ln != ";");
 }
 
@@ -152,8 +149,8 @@ std::string	urlsanitizer(std::string url)
 	return (url);
 }
 
-bool	exist(const std::string &name, struct stat *info)
-{ return (stat(name.c_str(), info) == 0); }
+bool	exist(const std::string &name, struct stat *stats)
+{ return (stat(name.c_str(), stats) == 0); }
 
 std::string	popchar(const std::string &s)
 { return (s.substr(0, s.size() - 1)); }
@@ -218,31 +215,19 @@ void errorpage(const std::string &code, const std::string &name, int sock)
 	send(sock, file.c_str(), file.size(), 0);
 }
 
-void sendf(int new_sock, const std::string &path, struct stat &info)
+void sendf(int new_sock, const std::string &path, struct stat &stats)
 {
-	std::string header = headers("200 OK", info.st_size, mime(path));
+	std::string header = headers("200 OK", stats.st_size, mime(path));
 	send(new_sock, header.c_str(), header.size(), 0);
 	int fd = open(path.c_str(), O_RDONLY);
 	#ifdef __APPLE__
 		struct sf_hdtr	hdtr = { NULL, 0, NULL, 0 };
 		off_t len = 0;
-		sendfile(new_sock, fd, 0, &len, &hdtr, 0);
+		sendfile(fd, new_sock, 0, &len, &hdtr, 0);
 	#else
 		long int off = 0;
 		while (sendfile(new_sock, fd, &off, SENDFILE_BUF))
 			;
 	#endif
 	close(fd);
-}
-
-std::string whichCgi(std::map<std::string, std::string> cgi, std::string file)
-{
-	std::map<std::string, std::string>::iterator	it;
-
-	for (it = cgi.begin(); it != cgi.end(); it++)
-	{
-		if (endwith(file, it->first))
-			return (it->second);
-	}
-	return ("");
 }

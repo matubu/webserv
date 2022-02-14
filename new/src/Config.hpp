@@ -18,26 +18,26 @@ class Config {
 		std::ifstream		f;
 		std::string			ln;
 		int					idx = 0;
-		struct stat			info;
+		struct stat			stats;
 
-		if (!stat(filename, &info) && info.st_mode & S_IFDIR)
-			perr(std::string(filename), "is a directory");
+		if (!stat(filename, &stats) && stats.st_mode & S_IFDIR)
+			syserr(std::string(filename), "is a directory");
 		f.open(filename);
 		if (f.fail())
-			perr("cannot open " + std::string(filename));
+			syserr("cannot open " + std::string(filename));
 		while (getline(&idx, f, ln))
 		{
 			try {
 				if (ln == "server")
 				{
 					Server server;
-					while (scope(filename, &idx, f, ln))
+					while (scope(&idx, f, ln))
 					{
 						std::vector<std::string> sargv = split(ln);
 						if (sargv[0] == "match" && need(sargv, 2))
 						{
 							Route &route = server.routes[urlsanitizer(sargv[1])];
-							while (scope(filename, &idx, f, ln))
+							while (scope(&idx, f, ln))
 							{
 								std::vector<std::string> margv = split(ln);
 								if (margv[0] == "autoindex" && need(margv, 2))
@@ -78,10 +78,13 @@ class Config {
 					servers.push_back(server);
 				}
 				else
-					err(filename, idx, "invalid property");
+					throw "invalid property";
 			}
-			catch (char const *e)
-			{ err(filename, idx, std::string(e)); }
+			catch (const char *e)
+			{
+				println(2, std::string(RED "error: ") + filename + ":" + atos(idx) + ": " + e);
+				exit(1);
+			}
 		}
 		f.close();
 	}

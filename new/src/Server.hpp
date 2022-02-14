@@ -5,11 +5,12 @@
 #include "Response.hpp"
 #include "Context.hpp"
 #include "utils.hpp"
-#include <sys/select.h>
-#include <unistd.h>
+#include "autoindex.hpp"
+#include "cgi.hpp"
 
-class	Server {
+class Server {
 	public:
+	int								sock;
 	int								port;
 	in_addr_t						host;
 	std::set<std::string>			name;
@@ -38,9 +39,8 @@ class	Server {
 
 	/*** DEBUG ***/
 	void	info(const std::string &msg) const
-	{ println(1, GRE + msg + " " ORA + atos(port)); }
-
-	void	perr(const std::string &msg) const
+	{ println(1, ORA + atos(port) + " " GRE + msg); }
+	void	syserr(const std::string &msg) const
 	{ println(2, RED "error: " ORA + atos(port) + RED " " + msg + ": " + std::strerror(errno)); }
 
 	void	debug()
@@ -62,9 +62,9 @@ class	Server {
 
 	Response	match(std::string url)
 	{
-		struct stat info;
+		struct stat stats;
 
-		if (routes.count(url) && exist(routes[url].root + routes[url].index, &info))
+		if (routes.count(url) && exist(routes[url].root + routes[url].index, &stats))
 			return (Response(200, routes[url].root + routes[url].index, &routes[url]));
 		std::string	save;
 		do {
@@ -76,157 +76,105 @@ class	Server {
 			{
 				std::string file = popchar(routes[url].root) + save;
 				std::cout << file << ENDL;
-				if (exist(file + routes[url].index, &info))
+				if (exist(file + routes[url].index, &stats))
 					return (Response(200, file + routes[url].index, &routes[url]));
-				if (exist(file, &info))
+				if (exist(file, &stats))
 					return (Response(200, file, &routes[url]));
 				break ;
 			}
 		} while (url != "/");
-		if (error.count(404) && exist(error[404], &info))
+		if (error.count(404) && exist(error[404], &stats))
 			return (Response(404, error[404], NULL));
 		return (Response(404, "", NULL));
 	}
-
-	#define SERVER_ERROR(msg) { \
-		server->perr(msg); \
-		return (NULL); \
-	}
-
+/*
 	int accept_new_client(int fd)
 	{
-		/*** ACCEPT ***/
 		int				new_sock;
 		struct sockaddr	client_addr;
 		socklen_t		client_len = sizeof(client_addr);
 
 	
-		if ((new_sock = accept(fd, (struct sockaddr *) &client_addr, &client_len)) < 0)
+		if ((new_sock = accept(fd, (struct sockaddr *) &client_addr, &client_len)) == -1)
 		{
-			perr(ENDL "cannot accept client");
+			if (errno != EAGAIN)
+				syserr(ENDL "cannot accept client");
 			return (-1);
 		}
+		info(RED "client accepted");
+		fcntl(new_sock, F_SETFL, O_NONBLOCK);
 		return (new_sock);
-
 	}
-
+*/
 	void respond_client(int fd, const Context &ctx)
 	{
 		/*** PARSE ***/
-		Request req(ctx);
-
-		std::cout << "request: " << ctx.plain << std::endl;
+		Request req(ctx.plain);
 
 		/*** FINDING ROUTE ***/
 		Response res = match(req.url);
 
-		info(RED "route found " + res.path);
+		info("route found: " + res.path);
 
 		/*** CGI ***/
-		bool pascontent = true;
-		std::string cgi = whichCgi(routes["/"].cgi, res.path);
+		std::string cgi = findCgi(routes["/"].cgi, res.path);
 		if (!cgi.empty())
 		{
-			int pipefd[2];
-			pipe(pipefd);
-
-			if (fork() == 0)
-			{
-				close(pipefd[0]);
-
-				dup2(pipefd[1], 1);
-				dup2(pipefd[1], 2);
-
-				close(pipefd[1]);
-
-				char **tab = (char **)calloc(sizeof(char *), 3);
-				tab[0] = strdup(cgi.c_str());
-				tab[1] = strdup(res.path.c_str());
-				if (execve(cgi.c_str(), tab, NULL) == -1)
-				{
-					perror("execve()");
-					exit(errno);
-				}
-				return ;
-			}
-			else
-			{
-				char c;
-
-				close(pipefd[1]);
-				std::string line;
-				std::string s =  "HTTP/1.1 200 OK\r\n";
-				int n = 1;
-				while (n)
-				{
-					while ((n = read(pipefd[0], &c, 1)) != 0)
-					{
-						line += c;
-						if (c == '\n')
-							break ;
-					}
-					if (line.substr(0, 7) == "Status:")
-					{
-						std::string error = line.substr(8);
-						std::vector<std::string> e = split(error, " ");
-						errorpage(e[0], e[1], fd);
-						pascontent = false;
-					}
-					if (line.empty())
-						continue ;
-					s += line;
-					line.clear();
-				}
-				send(fd, s.c_str(), s.size(), 0);
-				return ;
-			}
+			info("using CGI " + cgi);
+			handleCgi(fd, res, cgi);
+			return ;
 		}
 
-		if (!pascontent)
-			return ;
-
 		/*** SEND ***/
-		struct stat	info;
-		if (stat(res.path.c_str(), &info) == -1 || res.path.empty())
+		struct stat	stats;
+		if (stat(res.path.c_str(), &stats) == -1 || res.path.empty())
+		{
+			info("404");
 			errorpage("404", "Not Found", fd);
-		else if (info.st_mode & S_IFDIR)
+		}
+		else if (stats.st_mode & S_IFDIR)
 		{
 			if (res.route && res.route->autoindex)
 			{
-				DIR				*dir;
-				struct dirent	*diread;
-				std::string		file = ftos(AUTOINDEX_TEMPLATE_FILE);
-				size_t			start = file.find("{{"), end = file.find("}}");
-				std::string		s = file.substr(0, start);
-				std::string		pattern = file.substr(start + 2, end - start - 2);
-
-				if ((dir = opendir(res.path.c_str())) == NULL)
-					errorpage("403", "Forbidden", fd);
-				while ((diread = readdir(dir)))
-				{
-					struct stat	info;
-					char		date[128];
-
-					if (!strcmp(diread->d_name, ".") || !strcmp(diread->d_name, "..")) continue ;
-					stat((res.path + "/" + diread->d_name).c_str(), &info);
-					strftime(date, 128, "%d %h %Y", localtime(&info.st_ctime));
-
-					s += replaceAll(replaceAll(replaceAll(replaceAll(replaceAll(pattern,
-								"$NAME", diread->d_name),
-								"$URL", req.url + diread->d_name),
-								"$DATE", std::string(date)),
-								"$SIZE", readable_fsize(info.st_size)),
-								"$ISDIR", info.st_mode & S_IFDIR ? "1" : "");
-				}
-				s += file.substr(end + 2);
-				s = headers("200 OK", s.size(), "text/html") + "\r\n" + s;
-				send(fd, s.c_str(), s.size(), 0);
+				info("autoindex");
+				autoindex(fd, req, res);
 			}
 			else
+			{
+				info("autoindex forbidden");
 				errorpage("403", "Forbidden", fd);
+			}
 		}
 		else
-			sendf(fd, res.path, info);
+		{
+			info("sendfile");
+			sendf(fd, res.path, stats);
+		}
+	}
+
+	void	initsocket(int *sock)
+	{
+		struct	sockaddr_in	addr;
+
+		/*** SETUP ***/
+		if ((*sock = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+			throw "cannot create socket";
+
+		addr.sin_family = AF_INET;
+		addr.sin_addr.s_addr = host;
+		addr.sin_port = htons(port);
+
+		int					on = 1;
+		if (setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1)
+			throw "setsockopt failed";
+
+		if (bind(*sock, (struct sockaddr *) &addr, sizeof(addr)) == -1)
+			throw "cannot bind";
+
+		if (listen(*sock, MAX_CONNECTIONS) == -1)
+			throw "cannot listen";
+
+		//fcntl(*sock, F_SETFL, O_NONBLOCK);
 	}
 
 	/*** START ***/
@@ -234,84 +182,78 @@ class	Server {
 	{
 		server->info("starting ...");
 
-		int					sock;
-		struct				sockaddr_in	addr;
-		int					opt = 1;
+		int						sock, new_sock;
 		std::map<int, Context>	ctx;
-		char	*buf;
 
-		addr.sin_family = AF_INET;
-		addr.sin_addr.s_addr = server->host;
-		addr.sin_port = htons(server->port);
-
-		/*** SETUP ***/
-		if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-			SERVER_ERROR("cannot create socket");
-		// fcntl(sock, F_SETFL, O_NONBLOCK);
-		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-		if (bind(sock, (struct sockaddr *) &addr, sizeof(addr)) < 0)
-			SERVER_ERROR("cannot bind");
-		if (listen(sock, 10) < 0)
-			SERVER_ERROR("cannot listen");
+		try { server->initsocket(&sock); }
+		catch (const char *e)
+		{
+			server->syserr(e);
+			return (NULL);
+		}
 
 		server->info("started");
 
-		fd_set	read_fds, readable_fds;
-		FD_ZERO(&read_fds);
-		FD_SET(sock, &read_fds);
-		int		max_fd = sock + 1;
+   		fd_set	master_set, working_set;
+		FD_ZERO(&master_set);
+		int		max_fd = sock;
+		FD_SET(sock, &master_set);
 
-		buf = new char[server->body_size + 1];
+		char	*buf = new char[server->body_size + 1];
 
 		while (1) {
-			readable_fds = read_fds;
+			working_set = master_set;
 
-			select(max_fd, &readable_fds, NULL, NULL, NULL);
-
-			for (int fd = 0; fd < max_fd; ++fd)
+			if (select(max_fd + 1, &working_set, NULL, NULL, NULL) == -1)
 			{
-				if (!FD_ISSET(fd, &readable_fds))
+				server->syserr("cannot select");
+				break ;
+			}
+			server->info("connection ready");
+			for (int fd = 0; fd <= max_fd; ++fd)
+			{
+				if (!FD_ISSET(fd, &working_set))
 					continue ;
 				if (fd == sock)
 				{
-					int new_client_fd = server->accept_new_client(sock);
-					
-					max_fd = std::max(max_fd, new_client_fd + 1);
-					FD_SET(new_client_fd, &read_fds);
-					// printf("server: %d Joined :)\n", new_client_fd);
-					// send_message(new_client_fd, &read_fds, "server: welcome :)\n");
+					if ((new_sock = accept(fd, NULL, NULL)) == -1)
+						server->syserr(ENDL "cannot accept client");
+					fcntl(new_sock, F_SETFL, O_NONBLOCK);
+					FD_SET(new_sock, &master_set);
+					max_fd = std::max(max_fd, new_sock);
+					server->info(atos(new_sock) + " accepted");
 				}
 				else
 				{
 					try {
-						int ret = recv(fd, buf, server->body_size, 0);
-						if (ret == -1)
-							throw std::runtime_error("error recv");
-						buf[ret] = '\0';
-						const Context& cCtx = (ctx[fd] += std::string(buf));
-						if (cCtx.ended)
+						std::cout << "recv()" << std::endl;
+						int	rc = recv(fd, buf, server->body_size, 0);
+						std::cout << "recv ended" << std::endl;
+						if (rc == -1)
 						{
-							server->respond_client(fd, cCtx);
+							if (errno != EAGAIN && errno != EWOULDBLOCK)
+								throw std::runtime_error("error recv");
+							continue ;
+						}
+						buf[rc] = '\0';
+						const Context &context = (ctx[fd] += std::string(buf));
+						if (context.full)
+						{
+							server->info("data received: " + context.plain);
+							server->respond_client(fd, context);
+							server->info("closing connection");
+							FD_CLR(fd, &master_set);
 							close(fd);
-							/*
-								TODO
-								Always erase when closing client !!
-							*/
 							ctx.erase(fd);
 						}
 					}
 					catch (std::exception &e)
 					{
 						errorpage("500", "Internal Server Error", fd);
-						close(fd);
+						server->info(std::string("error: ") + e.what() + ", closing connection");
 					}
-					// if (something)
-					// 	FD_CLR(i, &read_fds);
 				}
 			}
-
-			/*** CLOSE ***/
-			// close(new_sock);
 		}
 		delete [] buf;
 		return (NULL);

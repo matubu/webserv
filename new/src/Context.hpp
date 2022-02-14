@@ -14,17 +14,17 @@ class Context {
 
 	public:
 	std::string	plain;
-	bool		ended;
+	bool		full;
 
-	Context() : ended(false) {}
+	Context() : full(false) {}
 	~Context() {}
 
 	Context &operator+=(const std::string &buf)
 	{
-		if (ended)
+		if (full)
 			return (*this);
 		plain += buf;
-		ended = true;
+		full = true;
 		return (*this);
 	}
 };
