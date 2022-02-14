@@ -232,3 +232,12 @@ void sendf(int new_sock, const std::string &path, struct stat &stats)
 	#endif
 	close(fd);
 }
+
+/* case insensitive string comparison functor */
+struct casecomp
+{
+	bool operator()(const std::string& a, const std::string& b) const
+	{
+		return strcasecmp(a.c_str(), b.c_str()) < 0;
+	}
+};
