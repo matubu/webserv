@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <sys/ioctl.h>
 #include <sys/select.h>
+#include <math.h>
 #include "mime.hpp"
 
 #ifdef __APPLE__
@@ -192,7 +193,7 @@ std::string	readable_fsize(size_t size)
 	std::string	units[] = {"B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
 	while (fsize > 1024 && ++i)
 		fsize /= 1024;
-	ss << fsize << units[i];
+	ss << roundf(fsize * 10) / 10 << units[i];
 	return (ss.str());
 }
 

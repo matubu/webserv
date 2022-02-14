@@ -17,7 +17,8 @@ void    autoindex(int fd, const Request &req, const Response &res)
         errorpage("403", "Forbidden", fd);
     while ((diread = readdir(dir)))
     {
-        if (!strcmp(diread->d_name, ".") || !strcmp(diread->d_name, "..")) continue ;
+        if (!strcmp(diread->d_name, ".")
+            || (!strcmp(diread->d_name, "..") && req.url == "/")) continue ;
 
         struct stat	stats;
         char		date[128];

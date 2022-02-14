@@ -251,6 +251,9 @@ class Server {
 					{
 						errorpage("500", "Internal Server Error", fd);
 						server->info(std::string("error: ") + e.what() + ", closing connection");
+						FD_CLR(fd, &master_set);
+						close(fd);
+						ctx.erase(fd);
 					}
 				}
 			}

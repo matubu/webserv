@@ -3,9 +3,6 @@
 #include "utils.hpp"
 
 class Context {
-	/*
-		check for "eof"
-	*/
 	bool check(const std::string &buf)
 	{
 		(void) buf;
