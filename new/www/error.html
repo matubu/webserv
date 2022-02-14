@@ -5,66 +5,75 @@
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<style>
-		@import "https://fonts.googleapis.com/css?family=Inconsolata";
-		*{
-			margin: 10px;
-			padding: 0;
-			font-family: "Inconsolata", Helvetica, sans-serif;
-			background-color: black;
-			color: white;
+		@import url('https://fonts.googleapis.com/css2?family=Lato:wght@700&family=Ubuntu+Mono&display=swap');
+
+		html {background: #191723}
+		body {
+			margin: 30px auto;
+			max-width: 1000px
 		}
-		h1{
-			font-size: 30px;
-			color: green;
+		body, a {
+			text-decoration: none;
+			color: rgb(248, 250, 255)
 		}
-		p{
-			font-size: 15px;
+		h1 {
+			font: 900 50px 'Lato', sans-serif;
+			margin: 0
 		}
-		.terminal p::before{
-			content: "WebServ$ ";
-			position: relative;
+		* {font-family: sans-serif;}
+		footer {
+			display: flex;
+			justify-content: center
 		}
-		.terminal p::after{
+		.dim {color: #8d8a9b}
+		header {
+			display: flex;
+			align-items: center;
+			flex-direction: column;
+			gap: 20px
+		}
+
+		.term {font-family: 'Ubuntu Mono', monospace}
+		.term::before {content: "WebServ$ "}
+		.term::after {
 			content: " _";
 			position: relative;
-			animation: 1s infinite clignote;
+			animation: 1s infinite blink;
 		}
 
-		@keyframes clignote {
-			0% { opacity: 0; }
-			50% { opacity: 100; }
-			100% { opacity: 0; }
+		@keyframes blink {
+			0% {opacity: 0}
+			50% {opacity: 100}
+			to {opacity: 0}
 		}
 
-		.terminal, .credit{
-			max-width: 800px;
-			display: block;
-			margin: auto;
-			padding-top: 100px;
-		}
-
-		@keyframes cred {
-			0% { content: "bledda"; }
-			50% { content: "mmheran" }
-			100% { content: "mberger-" }
-		}
-
-		.credit p::after{
-			content: "";
-			position: relative;
-			animation: 0.5s infinite cred;
+		main {
+			margin: 30px;
+			padding: 15px 25px;
+			border-radius: 10px;
+			background: #212130;
+			display: flex;
+			gap: 5px;
+			flex-direction: column;
+			box-shadow: #0002 0 0 20px 0
 		}
 	</style>
-	<title>$CODE - $NAME</title>
+	<title>Webserv $CODE - $NAME</title>
 </head>
 <body>
-
-	<div class="terminal">
-	  <h1>Error $CODE</h1>
-	  <p>Page not found</p>
-	</div>
-	<div class="credit">
-		<p>Create at 42 Nice by: </p>
-	</div>
+	<header>
+		<h1>Error $CODE</h1>
+	</header>
+	<main>
+		<p class="term">Page not found</p>
+	</main>
+	<footer class="dim">
+		<nav>
+			<span>WebServ - 2022, made by </span>
+			<a href="https://github.com/matubu" target="_blank">mberger-</a>,
+			<a href="https://github.com/mathieupi" target="_blank">mmehran</a>,
+			<a href="https://github.com/louchebem06" target="_blank">bledda</a>
+		</nav>
+	</footer>
 </body>
 </html>
