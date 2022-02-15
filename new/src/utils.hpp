@@ -45,8 +45,8 @@
 #define GRE "\033[0;92m" //green
 #define GRA "\033[0;90m" //grey
 
-std::string	&trim(std::string &s)
-{ return (s.erase(0, s.find_first_not_of(" \t")).erase(s.find_last_not_of(" \t") + 1)); }
+std::string	&trim(std::string &s, const std::string &charset = " \t")
+{ return (s.erase(0, s.find_first_not_of(charset)).erase(s.find_last_not_of(charset) + 1)); }
 
 bool	startwith(std::string s, std::string start)
 { return (s.substr(0, start.size()) == start); }

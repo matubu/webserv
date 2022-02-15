@@ -17,6 +17,10 @@ class Server {
 	std::map<int, std::string>		error;
 	size_t							body_size;
 	std::map<std::string, Route>	routes;
+	char							*buf;
+
+	std::map<int, Context>			ctx;
+	// std::map<int, Request>		ctx; /* its better imo */
 
 	Server() : body_size(1024) {}
 	~Server() {}
@@ -87,29 +91,50 @@ class Server {
 			return (Response(404, error[404], NULL));
 		return (Response(404, "", NULL));
 	}
-/*
-	int accept_new_client(int fd)
-	{
-		int				new_sock;
-		struct sockaddr	client_addr;
-		socklen_t		client_len = sizeof(client_addr);
 
-	
-		if ((new_sock = accept(fd, (struct sockaddr *) &client_addr, &client_len)) == -1)
-		{
-			if (errno != EAGAIN)
-				syserr(ENDL "cannot accept client");
-			return (-1);
-		}
-		info(RED "client accepted");
+	// close_server(all fd to close, ..)
+	// {
+
+	// }
+
+	int accept_new_client(int server_sock)
+	{
+		int	new_sock;
+
+		new_sock = accept(server_sock, NULL, NULL);
 		fcntl(new_sock, F_SETFL, O_NONBLOCK);
 		return (new_sock);
 	}
-*/
+
+	bool read_client(int fd)
+	{
+		int	rc = recv(fd, buf, body_size, 0);
+		if (rc == -1)
+		{
+			if (errno != EAGAIN && errno != EWOULDBLOCK)
+				throw std::runtime_error("error recv");
+			return false;
+		}
+		buf[rc] = '\0';
+		const Context &context = (ctx[fd] += std::string(buf));
+		if (context.full)
+		{
+			info("data received: " + context.plain);
+			respond_client(fd, context);
+			info("closing connection");
+			close(fd);
+			ctx.erase(fd);
+			return true;
+		}
+		return false;
+	}
+
 	void respond_client(int fd, const Context &ctx)
 	{
 		/*** PARSE ***/
 		Request req(ctx.plain);
+
+		std::cout << req << std::endl;
 
 		/*** FINDING ROUTE ***/
 		Response res = match(req.url);
@@ -183,7 +208,7 @@ class Server {
 		server->info("starting ...");
 
 		int						sock, new_sock;
-		std::map<int, Context>	ctx;
+
 
 		try { server->initsocket(&sock); }
 		catch (const char *e)
@@ -199,7 +224,7 @@ class Server {
 		int		max_fd = sock;
 		FD_SET(sock, &master_set);
 
-		char	*buf = new char[server->body_size + 1];
+		server->buf = new char[server->body_size + 1];
 
 		while (1) {
 			working_set = master_set;
@@ -212,53 +237,36 @@ class Server {
 			server->info("connection ready");
 			for (int fd = 0; fd <= max_fd; ++fd)
 			{
-				if (!FD_ISSET(fd, &working_set))
-					continue ;
+				if (!FD_ISSET(fd, &working_set)) continue ;
 				if (fd == sock)
 				{
-					if ((new_sock = accept(fd, NULL, NULL)) == -1)
+					if ((new_sock = server->accept_new_client(sock)) == -1)
+					{
 						server->syserr(ENDL "cannot accept client");
-					fcntl(new_sock, F_SETFL, O_NONBLOCK);
+						continue ;
+					}
+					server->info(atos(new_sock) + " accepted");
 					FD_SET(new_sock, &master_set);
 					max_fd = std::max(max_fd, new_sock);
-					server->info(atos(new_sock) + " accepted");
 				}
 				else
 				{
 					try {
-						std::cout << "recv()" << std::endl;
-						int	rc = recv(fd, buf, server->body_size, 0);
-						std::cout << "recv ended" << std::endl;
-						if (rc == -1)
-						{
-							if (errno != EAGAIN && errno != EWOULDBLOCK)
-								throw std::runtime_error("error recv");
-							continue ;
-						}
-						buf[rc] = '\0';
-						const Context &context = (ctx[fd] += std::string(buf));
-						if (context.full)
-						{
-							server->info("data received: " + context.plain);
-							server->respond_client(fd, context);
-							server->info("closing connection");
+						if (server->read_client(fd))
 							FD_CLR(fd, &master_set);
-							close(fd);
-							ctx.erase(fd);
-						}
 					}
 					catch (std::exception &e)
 					{
 						errorpage("500", "Internal Server Error", fd);
-						server->info(std::string("error: ") + e.what() + ", closing connection");
+						server->info("error: " + std::string(e.what()) + ", closing connection");
 						FD_CLR(fd, &master_set);
 						close(fd);
-						ctx.erase(fd);
+						server->ctx.erase(fd);
 					}
 				}
 			}
 		}
-		delete [] buf;
+		delete [] server->buf;
 		return (NULL);
 	}
 };

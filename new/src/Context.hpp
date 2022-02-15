@@ -2,20 +2,13 @@
 
 #include "utils.hpp"
 
+//bad idea
 class Context {
-	bool check(const std::string &buf)
-	{
-		(void) buf;
-		return false;
-	}
-
 	public:
 	std::string	plain;
 	bool		full;
-
 	Context() : full(false) {}
 	~Context() {}
-
 	Context &operator+=(const std::string &buf)
 	{
 		if (full)
