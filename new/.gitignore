@@ -2,3 +2,4 @@ bin/
 webserv
 .vscode
 src/main
+siege

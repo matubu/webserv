@@ -45,6 +45,11 @@
 			flex-direction: column;
 			box-shadow: #0002 0 0 20px 0
 		}
+
+		#path {
+			display: flex;
+			gap: 5px
+		}
 		.file {
 			display: flex;
 			align-items: center;
@@ -96,7 +101,21 @@
 		</nav>
 	</footer>
 	<script>
-		document.querySelector('#path').textContent = location.pathname
+		let a = (url, name) => {
+			let elm = document.createElement('a')
+			elm.textContent = name;
+			elm.href = url
+			path.append(elm)
+		}
+		let path = document.querySelector('#path')
+		let url = '/'
+		a(url, location.host)
+		for (let part of location.pathname.split('/').filter(s => s))
+		{
+			url += part + '/'
+			path.append(document.createTextNode('/'))
+			a(url, part)
+		}
 		for (let file of [...document.querySelector("main").children])
 		{
 			let svg = '<svg viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m5 2H6v16h12v-9h-7V4z" fill="#42a5f5"/></svg>'

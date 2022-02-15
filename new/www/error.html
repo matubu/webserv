@@ -35,24 +35,9 @@
 			flex-direction: column;
 			gap: 20px
 		}
-
-		.term {font-family: 'Ubuntu Mono', monospace}
-		.term::before {content: "WebServ$ "}
-		.term::after {
-			content: " _";
-			position: relative;
-			animation: 1s infinite blink;
-		}
-
-		@keyframes blink {
-			0% {opacity: 0}
-			50% {opacity: 100}
-			to {opacity: 0}
-		}
-
 		main {
 			margin: 30px 0;
-			padding: 15px 25px;
+			padding: 25px;
 			border-radius: 10px;
 			background: #212130;
 			display: flex;
@@ -60,14 +45,28 @@
 			flex-direction: column;
 			box-shadow: #0002 0 0 20px 0
 		}
+
+		@keyframes blink {
+			0% {opacity: 0}
+			50% {opacity: 100}
+			to {opacity: 0}
+		}
+		.term {font-family: 'Ubuntu Mono', monospace}
+		.term::before {content: "WebServ$ "}
+		.term::after {
+			content: " _";
+			position: relative;
+			animation: 1s infinite blink;
+		}
 	</style>
 </head>
 <body>
 	<header>
 		<h1>Error $CODE</h1>
+		<a href="/" class="dim">Back to home</a>
 	</header>
 	<main>
-		<p class="term">Page not found</p>
+		<span class="term">Page not found</span>
 	</main>
 	<footer class="dim">
 		<nav>

@@ -1,4 +1,4 @@
-FLAG = -pthread -Wall -Wextra -Werror -std=c++98
+FLAG = -pthread -Wall -Wextra -Werror -std=c++98 -O3
 # -g -fsanitize=address
 SRCS = main.cpp
 OBJS = $(patsubst %.cpp,bin/%.o,$(SRCS))
@@ -34,4 +34,16 @@ fclean: clean
 	@rm -rf $(NAME)
 re: fclean all
 
-.PHONY: all run clean fclean re
+siege_install:
+	curl -C - -O http://download.joedog.org/siege/siege-latest.tar.gz
+	rm -rf siege
+	mkdir siege
+	tar -xvf siege-latest.tar.gz -C siege --strip-components 1
+	rm -rf  siege-latest.tar.gz
+	cd siege && ./configure
+	cd siege && make
+
+siege:
+	cd siege/src && ./siege --rc=../../.siegerc http://localhost:8080
+
+.PHONY: all run clean fclean re siege_install siege
