@@ -123,9 +123,8 @@ class Server {
 		std::cout << req << std::endl;
 		if (req.ended())
 		{
-			info("data received: " + req.content.raw);
+			info("handling + closing connection");
 			handle_client(fd, req);
-			info("closing connection");
 			close(fd);
 			ctx.erase(fd);
 			return true;

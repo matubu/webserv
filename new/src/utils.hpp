@@ -35,7 +35,7 @@
 #define AUTOINDEX_TEMPLATE_FILE "www/autoindex.html"
 #define SENDFILE_BUF 2048
 #define READFILE_BUF 2048
-#define MAX_CONNECTIONS 32
+#define MAX_CONNECTIONS 256
 
 #define EOC "\033[0m"    //reset
 #define ENDL EOC "\n"    //reset + endl

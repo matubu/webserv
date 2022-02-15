@@ -1,4 +1,4 @@
-FLAG = -pthread -Wall -Wextra -Werror -std=c++98 -O3
+FLAG = -pthread -Wall -Wextra -Werror -std=c++98 -O3 -fsanitize=address
 # -g -fsanitize=address
 SRCS = main.cpp
 OBJS = $(patsubst %.cpp,bin/%.o,$(SRCS))
@@ -43,7 +43,11 @@ siege_install:
 	cd siege && ./configure
 	cd siege && make
 
-siege:
+siege_test_static:
+	cd siege/src && ./siege --rc=../../.siegerc http://localhost:8080/www
+siege_test_autoindex:
 	cd siege/src && ./siege --rc=../../.siegerc http://localhost:8080
+siege: siege_test_static
 
-.PHONY: all run clean fclean re siege_install siege
+.PHONY: all run clean fclean re \
+	siege_install siege_test_static siege_test_autoindex siege
