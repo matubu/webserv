@@ -66,20 +66,19 @@ class Server {
 	{
 		struct stat stats;
 
-		if (routes.count(url) && exist(routes[url].root + routes[url].index, &stats))
+		if (routes.count(url))
 			return (Response(200, routes[url].root + routes[url].index, &routes[url]));
 		std::string	save;
 		do {
 			size_t idx = url.find_last_of('/', url.size() - 2);
 			save = url.substr(idx, url.size() - idx - 1) + save;
 			url = url.substr(0, idx + 1);
-			std::cout << url << " " << save << ENDL;
 			if (routes.count(url))
 			{
 				std::string file = popchar(routes[url].root) + save;
 				if (exist(file + "/" + routes[url].index, &stats))
 					return (Response(200, file + "/" + routes[url].index, &routes[url]));
-				if (exist(file, &stats))
+				if (exist(file, &stats) || routes[url].redirect.first)
 					return (Response(200, file, &routes[url]));
 				break ;
 			}
@@ -121,7 +120,7 @@ class Server {
 		if (req.ended())
 		{
 			info("data received: " + req.content.raw);
-			respond_client(fd, req);
+			handle_client(fd, req);
 			info("closing connection");
 			close(fd);
 			ctx.erase(fd);
@@ -130,15 +129,21 @@ class Server {
 		return false;
 	}
 
-	void respond_client(int fd, const Request &req)
+	void handle_client(int fd, const Request &req)
 	{
-		/*** PARSE ***/
-		// Request req(ctx.plain);
-
 		/*** FINDING ROUTE ***/
 		Response res = match(req.url);
 
 		info("route found: " + res.path);
+
+		if (res.route && res.route->redirect.first)
+		{
+			info("redirect");
+			std::string	s = "HTTP/1.1 " + atos(res.route->redirect.first) + "\r\n";
+			s += "Location: " + res.route->redirect.second + "\r\n\r\n";
+			send(fd, s.c_str(), s.size(), 0);
+			return ;
+		}
 
 		/*** CGI ***/
 		std::string cgi = findCgi(routes["/"].cgi, res.path);
