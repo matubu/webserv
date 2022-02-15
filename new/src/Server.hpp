@@ -67,7 +67,11 @@ class Server {
 		struct stat stats;
 
 		if (routes.count(url))
-			return (Response(200, routes[url].root + routes[url].index, &routes[url]));
+		{
+			if (exist(routes[url].root + "/" + routes[url].index, &stats))
+				return (Response(200, routes[url].root + "/" + routes[url].index, &routes[url]));
+			return (Response(200, routes[url].root, &routes[url]));
+		}
 		std::string	save;
 		do {
 			size_t idx = url.find_last_of('/', url.size() - 2);
