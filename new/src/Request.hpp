@@ -9,10 +9,44 @@ class Request {
 	{
 		public:
 		std::string	raw;
+		int			remaining;
+		bool		multipart;
+		std::string boundary;
+		bool		ended;
+		void init(const std::string &data, const std::map<std::string, std::string, casecomp> &headers)
+		{
+			std::map<std::string, std::string>::const_iterator it;
+
+			if ((it = headers.find("Content-Length")) != headers.end()) remaining = atoi(it->second.c_str());
+
+			if ((it = headers.find("Content-Type")) != headers.end())
+			{
+				std::vector<std::string> fields = split(it->second, ";");
+				if (fields.size() == 2 && fields[0] == "multipart/form-data")
+				{
+					multipart = true;
+					trim(fields[1], " \n\t\r");
+					if (startwith(fields[1], "boundary="))
+						boundary = fields[1].substr(9);
+				}
+			}
+
+			appendRaw(data);
+		}
 		void appendRaw(const std::string &data)
 		{
+			std::cout << "REM" << remaining << std::endl;
+
+			remaining -= data.size();
 			raw += data;
+		std::cout << data << std::endl;
+
+			std::cout << "REM" << remaining << std::endl;
+			if (remaining <= 0)
+				ended = true;
 		}
+		Content() : remaining(0), multipart(false), ended(false) {}
+		~Content() {}
 	};
 	//TODO security
 	void addHeader(const std::string &header)
@@ -44,9 +78,13 @@ class Request {
 
 	std::map<std::string, std::string, casecomp> headers;
 	Content		content;
+	bool		empty;
 
-	Request(const std::string &data)
+	void init(const std::string &data)
 	{
+		empty = false;
+		std::cout << data << std::endl;
+
 		std::stringstream	ss(data);
 		std::getline(ss, request);
 		std::vector<std::string>	req = split(request);
@@ -57,17 +95,26 @@ class Request {
 
 		setHeaders(ss);
 
- 		std::string	body;
-		std::getline(ss, body);
-		addContent(body);
+		std::string body = data.substr(ss.tellg());
+		content.init(body, headers);
+	}
+
+	Request(const std::string &data)
+	{
+		init(data);
 	}
 
 	void addContent(const std::string &raw)
 	{
-		content.appendRaw(raw);
+		if (empty)
+			init(raw);
+		else
+			content.appendRaw(raw);
 	}
+
+	bool ended() const { return content.ended; }
 	
-	Request() {}
+	Request() : empty(true) {}
 	~Request() {}
 };
 

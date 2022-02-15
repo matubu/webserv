@@ -28,7 +28,7 @@ class	Route {
 	{ cgi[_ext] = _path.substr(_path.find_first_not_of('.')); }
 
 	void	setMethod(const std::string &_method)
-	{ isIn(strtolower(_method), 3, "get", "post", "delete") ? method.push_back(strtolower(_method)) : throw "invalid method"; }
+	{ isIn(_method, 3, "GET", "POST", "DELETE") ? method.push_back(_method) : throw "invalid method"; }
 
 	void	setRedirect(const int _code, const std::string &_redirect)
 	{ _code >= 300 && _code <= 307 ? redirect = make_pair(_code, _redirect) : throw "invalid redirect code"; }

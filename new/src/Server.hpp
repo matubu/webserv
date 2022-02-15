@@ -3,7 +3,6 @@
 #include "Route.hpp"
 #include "Request.hpp"
 #include "Response.hpp"
-#include "Context.hpp"
 #include "utils.hpp"
 #include "autoindex.hpp"
 #include "cgi.hpp"
@@ -19,8 +18,7 @@ class Server {
 	std::map<std::string, Route>	routes;
 	char							*buf;
 
-	std::map<int, Context>			ctx;
-	// std::map<int, Request>		ctx; /* its better imo */
+	std::map<int, Request>		ctx;
 
 	Server() : body_size(1024) {}
 	~Server() {}
@@ -116,11 +114,15 @@ class Server {
 			return false;
 		}
 		buf[rc] = '\0';
-		const Context &context = (ctx[fd] += std::string(buf));
-		if (context.full)
+		Request &req = ctx[fd];
+		std::cout << req << std::endl;
+
+		req.addContent(std::string(buf));
+		std::cout << req << std::endl;
+		if (req.ended())
 		{
-			info("data received: " + context.plain);
-			respond_client(fd, context);
+			info("data received: " + req.content.raw);
+			respond_client(fd, req);
 			info("closing connection");
 			close(fd);
 			ctx.erase(fd);
@@ -129,12 +131,10 @@ class Server {
 		return false;
 	}
 
-	void respond_client(int fd, const Context &ctx)
+	void respond_client(int fd, const Request &req)
 	{
 		/*** PARSE ***/
-		Request req(ctx.plain);
-
-		std::cout << req << std::endl;
+		// Request req(ctx.plain);
 
 		/*** FINDING ROUTE ***/
 		Response res = match(req.url);

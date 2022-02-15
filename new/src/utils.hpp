@@ -48,9 +48,9 @@
 std::string	&trim(std::string &s, const std::string &charset = " \t")
 { return (s.erase(0, s.find_first_not_of(charset)).erase(s.find_last_not_of(charset) + 1)); }
 
-bool	startwith(std::string s, std::string start)
+bool	startwith(const std::string &s, const std::string &start)
 { return (s.substr(0, start.size()) == start); }
-bool	endwith(std::string s, std::string end)
+bool	endwith(const std::string &s, const std::string &end)
 {
 	if (end.size() > s.size()) return (false);
 	return (s.substr(s.size() - end.size()) == end);
