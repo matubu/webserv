@@ -77,9 +77,8 @@ class Server {
 			if (routes.count(url))
 			{
 				std::string file = popchar(routes[url].root) + save;
-				std::cout << file << ENDL;
-				if (exist(file + routes[url].index, &stats))
-					return (Response(200, file + routes[url].index, &routes[url]));
+				if (exist(file + "/" + routes[url].index, &stats))
+					return (Response(200, file + "/" + routes[url].index, &routes[url]));
 				if (exist(file, &stats))
 					return (Response(200, file, &routes[url]));
 				break ;
@@ -198,8 +197,6 @@ class Server {
 
 		if (listen(*sock, MAX_CONNECTIONS) == -1)
 			throw "cannot listen";
-
-		//fcntl(*sock, F_SETFL, O_NONBLOCK);
 	}
 
 	/*** START ***/
@@ -208,7 +205,6 @@ class Server {
 		server->info("starting ...");
 
 		int						sock, new_sock;
-
 
 		try { server->initsocket(&sock); }
 		catch (const char *e)
