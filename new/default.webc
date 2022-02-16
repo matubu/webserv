@@ -1,0 +1,42 @@
+server
+	match /
+		autoindex true
+		index index.html
+		root /Users/mberger-/webserv/new
+		cgi .php /Users/mberger-/.brew/bin/php-cgi
+		cgi .py /usr/local/bin/python3
+		method GET
+	;
+	match /hello
+		redirect 307 https://google.com
+	;
+	match /url
+	;
+	port 8080
+	host 0.0.0.0
+	name apple.com
+	name google.com
+	name google.com
+	body_size 2048
+;
+
+server
+	port 7000
+	match /
+		autoindex true
+		root /Users/mberger-/webserv/new/www
+	;
+;
+
+// tester conf
+server
+	host 0.0.0.0
+	port 8000
+	match /
+		method GET
+		cgi .bla cgi_test
+	;
+	match /put_test/
+		method PUT
+	;
+;

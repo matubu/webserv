@@ -1,0 +1,16 @@
+server
+	port 8080
+	host localhost
+
+	match /
+		root /home/matubu/webserv/www
+	;
+
+	match /img
+		root /test
+	;
+
+	match /self
+		root /self
+	;
+;

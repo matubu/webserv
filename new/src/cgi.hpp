@@ -14,7 +14,6 @@ std::string findCgi(const std::map<std::string, std::string> &cgi, const std::st
 
 // run cgi function
 
-
 void handleCgi(int fd, const Request &req, const std::string &uri ,const std::string &cgi)
 {
 	int s_cfd[2]; //s_c == server to cgi

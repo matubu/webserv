@@ -11,7 +11,7 @@ class Server {
 	int								sock;
 	int								port;
 	in_addr_t						host;
-	std::set<std::string>			name;
+	std::set<std::string>			name; //TODO use it
 	std::map<int, std::string>		error;
 	size_t							body_size;
 	std::map<std::string, Route>	routes;
@@ -44,17 +44,17 @@ class Server {
 	void	syserr(const std::string &msg) const
 	{ println(2, RED "error: " ORA + atos(port) + RED " " + msg + ": " + std::strerror(errno)); }
 
-	void	debug()
+	void	debug() const
 	{
 		std::cout << ENDL;
 		std::cout << "port " << port << ENDL;
 		std::cout << "host " << (host & 255) << "." << (host >> 8 & 255) << "." << (host >> 16 & 255) << "." << (host >> 24) << ENDL;
 		for (std::set<std::string>::iterator it = name.begin(); it != name.end(); it++)
 			std::cout << "name " << *it << ENDL;
-		for (std::map<int, std::string>::iterator it = error.begin(); it != error.end(); it++)
+		for (std::map<int, std::string>::const_iterator it = error.cbegin(); it != error.cend(); it++)
 			std::cout << "error " << it->first << " " << it->second << ENDL;
 		std::cout << "body_size " << body_size << ENDL;
-		for (std::map<std::string, Route>::iterator it = routes.begin(); it != routes.end(); it++)
+		for (std::map<std::string, Route>::const_iterator it = routes.cbegin(); it != routes.cend(); it++)
 		{
 			std::cout << "match " << it->first << ENDL;
 			it->second.debug();
@@ -101,10 +101,10 @@ class Server {
 		return false;
 	}
 
-	//path with start / or empty
-	//path without end /
 	bool	tryroot(int fd, const Request &req, const Route &route, const std::string &path)
 	{
+		if (!route.method.count(req.type))
+			return (false);
 		/*** REDIRECT ***/
 		if (route.redirect.first)
 		{
@@ -143,9 +143,11 @@ class Server {
 		return (true);
 	}
 
-	//put error if request /../ or other outside root
+	//TODO put error if request /../ or other outside root
 	void handle_client(int fd, const Request &req)
 	{
+		if (req.url.find("..") != std::string::npos)
+			return (errorpage("400", "Bad Request", fd));
 		/*** FINDING ROUTE ***/
 		std::string url = req.url;
 		std::string	path;

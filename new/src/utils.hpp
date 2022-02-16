@@ -30,7 +30,7 @@
 # include <sys/sendfile.h>
 #endif
 
-#define DEFAULT_CONF "default.conf"
+#define DEFAULT_CONF "default.webc"
 #define DEFAULT_ERROR_FILE "www/error.html"
 #define AUTOINDEX_TEMPLATE_FILE "www/autoindex.html"
 #define SENDFILE_BUF 2048

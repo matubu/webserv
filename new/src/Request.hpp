@@ -95,7 +95,9 @@ class Request {
 
 		setHeaders(ss);
 
-		std::string body = data.substr(ss.tellg());
+		std::string body;
+		if (ss.tellg() != -1)
+			body = data.substr(ss.tellg());
 		content.init(body, headers);
 	}
 
