@@ -18,7 +18,7 @@ class Server {
 	std::map<std::string, Route>	routes;
 	char							*buf;
 
-	std::map<int, Request>		ctx;
+	std::map<int, Request>			ctx;
 
 	Server() : body_size(1024) {}
 	~Server() {}
@@ -153,7 +153,7 @@ class Server {
 		if (!cgi.empty())
 		{
 			info("using CGI " + cgi);
-			handleCgi(fd, res, cgi);
+			handleCgi(fd, res, req, cgi);
 			return ;
 		}
 

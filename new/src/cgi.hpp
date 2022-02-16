@@ -13,44 +13,56 @@ std::string findCgi(const std::map<std::string, std::string> &cgi, const std::st
 	return ("");
 }
 
-void    handleCgi(int fd, const Response &res, const std::string &cgi)
+// run cgi function
+
+
+void handleCgi(int fd, const Response &res, const Request &req, const std::string &cgi)
 {
-	int pipefd[2];
-	pipe(pipefd);
-
-	if (fork() == 0)
+	int s_cfd[2]; //s_c == server to cgi
+	int c_sfd[2]; //c_s == cgi to server
+	pipe(s_cfd);
+	pipe(c_sfd);
+	if (fork() == 0) //cgi side
 	{
-		close(pipefd[0]);
+		close(s_cfd[1]);
+		close(c_sfd[0]);
 
-		dup2(pipefd[1], 1);
-		dup2(pipefd[1], 2);
+		dup2(s_cfd[0], 0);
+		close(s_cfd[0]);
+		dup2(c_sfd[1], 1);
+		close(c_sfd[1]);
 
-		close(pipefd[1]);
+		char * const argv[] = { const_cast<char *>(cgi.c_str()), const_cast<char *>(res.path.c_str()), 0 };
 
-		char    **tab = (char **)calloc(sizeof(char *), 3);
-		tab[0] = strdup(cgi.c_str());
-		tab[1] = strdup(res.path.c_str());
-		if (execve(cgi.c_str(), tab, NULL) == -1)
-			syserr("execve() " + cgi);
+		if (execve(cgi.c_str(), argv, NULL) == -1)
+		{
+			// syserr("execve() " + cgi);
+			write(1, "ERROR", 6);
+		}
 		exit(0);
 	}
-	else
+	else //server side
 	{
-		char    c;
+		char c;
 
-		close(pipefd[1]);
+		close(s_cfd[0]);
+		close(c_sfd[1]);
+
+		write(s_cfd[1], req.content.raw.c_str(), req.content.raw.length());
+		close(s_cfd[1]);
+
 		std::string line;
-		std::string s =  "HTTP/1.1 200 OK\r\n";
+		std::string s = "HTTP/1.1 200 OK\r\n";
 		int n;
 		do
 		{
-			while ((n = read(pipefd[0], &c, 1)) != 0)
+			while ((n = read(c_sfd[0], &c, 1)) != 0)
 			{
 				line += c;
 				if (c == '\n')
 					break ;
 			}
-			if (line.substr(0, 7) == "Status:")
+			if (line == "ERROR" || line.substr(0, 7) == "Status:")
 			{
 				std::string error = line.substr(8);
 				std::vector<std::string> e = split(error, " ");
@@ -63,5 +75,6 @@ void    handleCgi(int fd, const Response &res, const std::string &cgi)
 			line.clear();
 		} while (n);
 		send(fd, s.c_str(), s.size(), 0);
+		close(c_sfd[0]);
 	}
 }
