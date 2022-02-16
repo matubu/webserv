@@ -35,13 +35,13 @@ class Request {
 		}
 		void appendRaw(const std::string &data)
 		{
-			std::cout << "REM" << remaining << std::endl;
+			//std::cout << "REM" << remaining << std::endl;
 
 			remaining -= data.size();
 			raw += data;
-		std::cout << data << std::endl;
+			//std::cout << data << std::endl;
 
-			std::cout << "REM" << remaining << std::endl;
+			//std::cout << "REM" << remaining << std::endl;
 			if (remaining <= 0)
 				ended = true;
 		}
@@ -83,7 +83,7 @@ class Request {
 	void init(const std::string &data)
 	{
 		empty = false;
-		std::cout << data << std::endl;
+		//std::cout << data << std::endl;
 
 		std::stringstream	ss(data);
 		std::getline(ss, request);
@@ -118,7 +118,7 @@ class Request {
 	~Request() {}
 };
 
-
+/*
 std::ostream &operator<<(std::ostream &os, const Request &req)
 {
 	os << "HEADERS [" << std::endl;
@@ -128,3 +128,4 @@ std::ostream &operator<<(std::ostream &os, const Request &req)
 	os << "RECEIVED CONTENT LENGTH: ("  << req.content.raw.length() << ")" << std::endl; 
 	return os;
 }
+*/

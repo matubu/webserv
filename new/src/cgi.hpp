@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Response.hpp"
 #include "utils.hpp"
 
 std::string findCgi(const std::map<std::string, std::string> &cgi, const std::string &file)
@@ -16,7 +15,7 @@ std::string findCgi(const std::map<std::string, std::string> &cgi, const std::st
 // run cgi function
 
 
-void handleCgi(int fd, const Response &res, const Request &req, const std::string &cgi)
+void handleCgi(int fd, const Request &req, const std::string &uri ,const std::string &cgi)
 {
 	int s_cfd[2]; //s_c == server to cgi
 	int c_sfd[2]; //c_s == cgi to server
@@ -32,7 +31,7 @@ void handleCgi(int fd, const Response &res, const Request &req, const std::strin
 		dup2(c_sfd[1], 1);
 		close(c_sfd[1]);
 
-		char * const argv[] = { const_cast<char *>(cgi.c_str()), const_cast<char *>(res.path.c_str()), 0 };
+		char * const argv[] = { const_cast<char *>(cgi.c_str()), const_cast<char *>(uri.c_str()), 0 };
 
 		if (execve(cgi.c_str(), argv, NULL) == -1)
 		{
