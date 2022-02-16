@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Response.hpp"
 #include "utils.hpp"
 
 std::string findCgi(const std::map<std::string, std::string> &cgi, const std::string &file)
@@ -13,8 +12,9 @@ std::string findCgi(const std::map<std::string, std::string> &cgi, const std::st
 	return ("");
 }
 
-void    handleCgi(int fd, const Response &res, const std::string &cgi)
+void    handleCgi(int fd, const std::string &path, const std::string &cgi)
 {
+	std::cout << "cgi" << ENDL;
 	int pipefd[2];
 	pipe(pipefd);
 
@@ -29,7 +29,7 @@ void    handleCgi(int fd, const Response &res, const std::string &cgi)
 
 		char    **tab = (char **)calloc(sizeof(char *), 3);
 		tab[0] = strdup(cgi.c_str());
-		tab[1] = strdup(res.path.c_str());
+		tab[1] = strdup(path.c_str());
 		if (execve(cgi.c_str(), tab, NULL) == -1)
 			syserr("execve() " + cgi);
 		exit(0);

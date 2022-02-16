@@ -1,5 +1,4 @@
-FLAG = -pthread -Wall -Wextra -Werror -std=c++98 -O3 -fsanitize=address
-# -g -fsanitize=address
+FLAG = -pthread -Wall -Wextra -Werror -std=c++98 -O3# -fsanitize=address
 SRCS = main.cpp
 OBJS = $(patsubst %.cpp,bin/%.o,$(SRCS))
 NAME = webserv

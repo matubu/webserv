@@ -241,3 +241,10 @@ struct casecomp
 		return strcasecmp(a.c_str(), b.c_str()) < 0;
 	}
 };
+
+void	redirect(int fd, int code, const std::string &url)
+{
+	std::string	s = "HTTP/1.1 " + atos(code) + "\r\n";
+	s += "Location: " + url + "\r\n\r\n";
+	send(fd, s.c_str(), s.size(), 0);
+}

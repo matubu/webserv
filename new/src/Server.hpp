@@ -2,7 +2,6 @@
 
 #include "Route.hpp"
 #include "Request.hpp"
-#include "Response.hpp"
 #include "utils.hpp"
 #include "autoindex.hpp"
 #include "cgi.hpp"
@@ -62,36 +61,6 @@ class Server {
 		}
 	}
 
-	Response	match(std::string url)
-	{
-		struct stat stats;
-
-		if (routes.count(url))
-		{
-			if (exist(routes[url].root + "/" + routes[url].index, &stats))
-				return (Response(200, routes[url].root + "/" + routes[url].index, &routes[url]));
-			return (Response(200, routes[url].root, &routes[url]));
-		}
-		std::string	save;
-		do {
-			size_t idx = url.find_last_of('/', url.size() - 2);
-			save = url.substr(idx, url.size() - idx - 1) + save;
-			url = url.substr(0, idx + 1);
-			if (routes.count(url))
-			{
-				std::string file = popchar(routes[url].root) + save;
-				if (exist(file + "/" + routes[url].index, &stats))
-					return (Response(200, file + "/" + routes[url].index, &routes[url]));
-				if (exist(file, &stats) || routes[url].redirect.first)
-					return (Response(200, file, &routes[url]));
-				break ;
-			}
-		} while (url != "/");
-		if (error.count(404) && exist(error[404], &stats))
-			return (Response(404, error[404], NULL));
-		return (Response(404, "", NULL));
-	}
-
 	// close_server(all fd to close, ..)
 	// {
 
@@ -117,10 +86,10 @@ class Server {
 		}
 		buf[rc] = '\0';
 		Request &req = ctx[fd];
-		std::cout << req << std::endl;
+		//std::cout << req << std::endl;
 
 		req.addContent(std::string(buf));
-		std::cout << req << std::endl;
+		//std::cout << req << std::endl;
 		if (req.ended())
 		{
 			info("handling + closing connection");
@@ -132,55 +101,65 @@ class Server {
 		return false;
 	}
 
-	void handle_client(int fd, const Request &req)
+	//path with start / or empty
+	//path without end /
+	bool	tryroot(int fd, const Request &req, const Route &route, const std::string &path)
 	{
-		/*** FINDING ROUTE ***/
-		Response res = match(req.url);
-
-		info("route found: " + res.path);
-
-		if (res.route && res.route->redirect.first)
+		/*** REDIRECT ***/
+		if (route.redirect.first)
 		{
-			info("redirect");
-			std::string	s = "HTTP/1.1 " + atos(res.route->redirect.first) + "\r\n";
-			s += "Location: " + res.route->redirect.second + "\r\n\r\n";
-			send(fd, s.c_str(), s.size(), 0);
-			return ;
+			redirect(fd, route.redirect.first, route.redirect.second + "/" + path);
+			return (true);
 		}
 
+		if (route.root.empty())
+			return (false);
+		std::string uri = route.root + path;
+		struct stat	stats;
+		std::cout << "tryuri " << uri << ENDL;
+		if (exist(uri + "/" + route.index, &stats))
+			uri += "/" + route.index;
+		else if (!exist(uri, &stats))
+			return (false);
+
 		/*** CGI ***/
-		std::string cgi = findCgi(routes["/"].cgi, res.path);
+		std::string cgi = findCgi(route.cgi, uri);
 		if (!cgi.empty())
 		{
-			info("using CGI " + cgi);
-			handleCgi(fd, res, cgi);
-			return ;
+			handleCgi(fd, uri, cgi);
+			return (true);
 		}
 
 		/*** SEND ***/
-		struct stat	stats;
-		if (stat(res.path.c_str(), &stats) == -1 || res.path.empty())
+		if (stats.st_mode & S_IFDIR)
 		{
-			info("404");
-			errorpage("404", "Not Found", fd);
-		}
-		else if (stats.st_mode & S_IFDIR)
-		{
-			if (res.route && res.route->autoindex)
-			{
-				info("autoindex");
-				autoindex(fd, req, res);
-			}
+			if (route.autoindex)
+				autoindex(fd, req, uri);
 			else
-			{
-				info("autoindex forbidden");
 				errorpage("403", "Forbidden", fd);
-			}
+			return (true);
 		}
-		else
+		sendf(fd, uri, stats);
+		return (true);
+	}
+
+	//put error if request /../ or other outside root
+	void handle_client(int fd, const Request &req)
+	{
+		/*** FINDING ROUTE ***/
+		std::string url = req.url;
+		std::string	path;
+
+		std::cout << "GET " << url << ENDL;
+		while (1)
 		{
-			info("sendfile");
-			sendf(fd, res.path, stats);
+			std::cout << url << " " << path << ENDL;
+			if (routes.count(url) && tryroot(fd, req, routes[url], popchar(path)))
+				return ;
+			if (url == "/") return (errorpage("404", "Not Found", fd));
+			size_t idx = url.find_last_of('/', url.size() - 2);
+			path = url.substr(idx + 1, url.size() - idx - 1) + path;
+			url = url.substr(0, idx + 1);
 		}
 	}
 
@@ -196,7 +175,7 @@ class Server {
 		addr.sin_addr.s_addr = host;
 		addr.sin_port = htons(port);
 
-		int					on = 1;
+		int	on = 1;
 		if (setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1)
 			throw "setsockopt failed";
 
@@ -233,15 +212,16 @@ class Server {
 		while (1) {
 			working_set = master_set;
 
-			if (select(max_fd + 1, &working_set, NULL, NULL, NULL) == -1)
+			int	count;
+			if ((count = select(max_fd + 1, &working_set, NULL, NULL, NULL)) == -1)
 			{
 				server->syserr("cannot select");
 				break ;
 			}
-			server->info("connection ready");
-			for (int fd = 0; fd <= max_fd; ++fd)
+			for (int fd = 0; count && fd <= max_fd; ++fd)
 			{
 				if (!FD_ISSET(fd, &working_set)) continue ;
+				count--;
 				if (fd == sock)
 				{
 					if ((new_sock = server->accept_new_client(sock)) == -1)
@@ -256,17 +236,17 @@ class Server {
 				else
 				{
 					try {
-						if (server->read_client(fd))
-							FD_CLR(fd, &master_set);
+						if (!server->read_client(fd))
+							continue ;
 					}
 					catch (std::exception &e)
 					{
 						errorpage("500", "Internal Server Error", fd);
 						server->info("error: " + std::string(e.what()) + ", closing connection");
-						FD_CLR(fd, &master_set);
-						close(fd);
-						server->ctx.erase(fd);
 					}
+					FD_CLR(fd, &master_set);
+					close(fd);
+					server->ctx.erase(fd);
 				}
 			}
 		}
