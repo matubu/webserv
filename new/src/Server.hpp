@@ -71,6 +71,7 @@ class Server {
 		int	new_sock;
 
 		new_sock = accept(server_sock, NULL, NULL);
+		info("accept client");
 		fcntl(new_sock, F_SETFL, O_NONBLOCK);
 		return (new_sock);
 	}
@@ -230,7 +231,6 @@ class Server {
 						server->syserr(ENDL "cannot accept client");
 						continue ;
 					}
-					server->info(atos(new_sock) + " accepted");
 					FD_SET(new_sock, &master_set);
 					max_fd = std::max(max_fd, new_sock);
 				}

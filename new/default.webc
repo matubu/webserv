@@ -14,7 +14,7 @@ server
 	match /url
 	;
 	port 8080
-	host 0.0.0.0
+	host localhost
 	name apple.com
 	name google.com
 	name google.com
@@ -31,7 +31,7 @@ server
 
 // tester conf
 server
-	host 0.0.0.0
+	host localhost
 	port 8000
 	match /
 		root $PWD
@@ -44,5 +44,8 @@ server
 	;
 	match /post_body/
 		method POST
+	;
+	match /directory/
+		method GET
 	;
 ;

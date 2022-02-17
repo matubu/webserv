@@ -35,7 +35,6 @@
 #define AUTOINDEX_TEMPLATE_FILE "www/autoindex.html"
 #define SENDFILE_BUF 2048
 #define READFILE_BUF 2048
-#define PWD_PATH_BUF 2048
 #define MAX_CONNECTIONS 256
 
 #define EOC "\033[0m"    //reset
@@ -210,14 +209,11 @@ std::string headers(const std::string &code, size_t len, const std::string &type
 	return ("HTTP/1.1 " + code + "\r\nContent-length: " + atos(len) + "\r\nContent-Type: " + type + "\r\n\r\n");
 }
 
+const	std::string g_ferrorpage = ftos(DEFAULT_ERROR_FILE);
+
 void errorpage(const std::string &code, const std::string &name, int sock)
 {
-	std::ifstream			ifs;
-	std::string				line, file;
-
-	ifs.open(DEFAULT_ERROR_FILE);
-	while (std::getline(ifs, line))
-		file += replaceAll(replaceAll(line,
+	std::string	file = replaceAll(replaceAll(g_ferrorpage,
 				"$NAME", name),
 				"$CODE", code);
 	file = headers(code, file.size(), "text/html") + file;
@@ -259,8 +255,8 @@ void	redirect(int fd, int code, const std::string &url)
 
 std::string	cwd()
 {
-	char cwd[PWD_PATH_BUF];
-	if (getcwd(cwd, PWD_PATH_BUF) != NULL)
+	char	cwd[PATH_MAX];
+	if (getwd(cwd) != NULL)
 		return (std::string(cwd));
 	return (std::string());
 }
