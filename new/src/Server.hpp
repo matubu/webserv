@@ -77,6 +77,7 @@ class Server {
 
 	bool read_client(int fd)
 	{
+		std::cout << "recv " << fd << std::endl;
 		int	rc = recv(fd, buf, body_size, 0);
 		if (rc == -1)
 		{
@@ -88,16 +89,20 @@ class Server {
 		Request &req = ctx[fd];
 		//std::cout << req << std::endl;
 
+		std::cout << "add content" << std::endl;
 		req.addContent(std::string(buf));
 		//std::cout << req << std::endl;
+		std::cout << "ended ?" << std::endl;
 		if (req.ended())
 		{
+			std::cout << "handle" << std::endl;
 			info("handling + closing connection");
 			handle_client(fd, req);
 			close(fd);
 			ctx.erase(fd);
 			return true;
 		}
+		std::cout << "return" << std::endl;
 		return false;
 	}
 
@@ -146,6 +151,7 @@ class Server {
 	//TODO put error if request /../ or other outside root
 	void handle_client(int fd, const Request &req)
 	{
+		std::cout << "handle client" << std::endl;
 		if (req.url.find("..") != std::string::npos)
 			return (errorpage("400", "Bad Request", fd));
 		/*** FINDING ROUTE ***/

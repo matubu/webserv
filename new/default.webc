@@ -2,7 +2,7 @@ server
 	match /
 		autoindex true
 		index index.html
-		root /Users/mmehran/cursus/webserv/new
+		root /Users/mberger-/webserv/new
 		cgi .php /Users/mmehran/.brew/bin/php-cgi
 		cgi .py /usr/local/bin/python3
 		method GET
@@ -25,7 +25,7 @@ server
 	port 7000
 	match /
 		autoindex true
-		root /Users/mmehran/cursus/webserv/new
+		root /Users/mberger-/webserv/new
 	;
 ;
 

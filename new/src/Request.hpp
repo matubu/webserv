@@ -63,11 +63,10 @@ class Request {
 	void setHeaders(std::stringstream &ss)
 	{
 		std::string header;
-		std::getline(ss, header);
-		while (!header.empty() && header != "\r")
+		while (std::getline(ss, header) && !header.empty() && header != "\r")
 		{
+			std::cout << "in" << std::endl;
 			addHeader(header);
-			std::getline(ss, header);
 		}
 	}
 	public:
@@ -82,8 +81,9 @@ class Request {
 
 	void init(const std::string &data)
 	{
+		std::cout << "init" << std::endl;
 		empty = false;
-		//std::cout << data << std::endl;
+		std::cout << data << std::endl;
 
 		std::stringstream	ss(data);
 		std::getline(ss, request);
@@ -93,12 +93,14 @@ class Request {
 		url = urlsanitizer(req[1]);
 		protocol = req[2];
 
+		std::cout << "setHeaders" << std::endl;
 		setHeaders(ss);
 
-		std::string body;
+		std::cout << "content init" << std::endl;
 		if (ss.tellg() != -1)
-			body = data.substr(ss.tellg());
-		content.init(body, headers);
+			content.init(data.substr(ss.tellg()), headers);
+
+		std::cout << "end" << std::endl;
 	}
 
 	Request(const std::string &data)
