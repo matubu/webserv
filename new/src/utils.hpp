@@ -35,6 +35,7 @@
 #define AUTOINDEX_TEMPLATE_FILE "www/autoindex.html"
 #define SENDFILE_BUF 2048
 #define READFILE_BUF 2048
+#define PWD_PATH_BUF 2048
 #define MAX_CONNECTIONS 256
 
 #define EOC "\033[0m"    //reset
@@ -254,4 +255,12 @@ void	redirect(int fd, int code, const std::string &url)
 	std::string	s = "HTTP/1.1 " + atos(code) + "\r\n";
 	s += "Location: " + url + "\r\n\r\n";
 	send(fd, s.c_str(), s.size(), 0);
+}
+
+std::string	cwd()
+{
+	char cwd[PWD_PATH_BUF];
+	if (getcwd(cwd, PWD_PATH_BUF) != NULL)
+		return (std::string(cwd));
+	return (std::string());
 }

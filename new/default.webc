@@ -2,7 +2,7 @@ server
 	match /
 		autoindex true
 		index index.html
-		root /Users/mberger-/webserv/new
+		root $PWD
 		cgi .php /Users/mmehran/.brew/bin/php-cgi
 		cgi .py /usr/local/bin/python3
 		method GET
@@ -25,7 +25,7 @@ server
 	port 7000
 	match /
 		autoindex true
-		root /Users/mberger-/webserv/new
+		root $PWD
 	;
 ;
 
@@ -34,10 +34,15 @@ server
 	host 0.0.0.0
 	port 8000
 	match /
+		root $PWD
 		method GET
-		cgi .bla cgi_test
+		cgi .bla cgi_tester
 	;
 	match /put_test/
+		root $PWD
 		method PUT
+	;
+	match /post_body/
+		method POST
 	;
 ;
