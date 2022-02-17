@@ -46,6 +46,8 @@ siege_test_static:
 	cd siege/src && ./siege --rc=../../.siegerc http://localhost:8080/www
 siege_test_autoindex:
 	cd siege/src && ./siege --rc=../../.siegerc http://localhost:8080
+siege_test_python_cgi:
+	cd siege/src && ./siege --rc=../../.siegerc http://localhost:8080/www/cgi-bin/cgitest.py
 siege: siege_test_static
 
 .PHONY: all run clean fclean re \

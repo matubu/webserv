@@ -139,6 +139,13 @@ std::string	strtolower(std::string str)
 	return (str);
 }
 
+std::string	strtoupper(std::string str)
+{
+	for (std::string::iterator it = str.begin(); it != str.end(); it++)
+		*it = toupper(*it);
+	return (str);
+}
+
 std::string	urlsanitizer(std::string url)
 {
 	size_t end = url.find_first_of("#?");

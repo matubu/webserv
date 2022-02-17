@@ -17,7 +17,6 @@ if file_content.file:
 				message = f'"{file_content.filename}" uploaded with great success :)'
 
 
-  
 print("Content-type: text/html\r\n\r\n")
 print("<html><body>")
 
