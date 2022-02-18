@@ -1,1 +1,7 @@
-node_modules
+bin/
+webserv
+.vscode
+src/main
+siege
+uploaded_files/*
+!uploaded_files/.gitkeep
