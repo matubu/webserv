@@ -260,3 +260,11 @@ std::string	cwd()
 		return (std::string(cwd));
 	return (std::string());
 }
+
+template <typename T>
+bool contains(const std::vector<T> &v, const T &elem)
+{
+	if (std::find(v.begin(), v.end(), elem) != v.end())
+		return true;
+	return false;
+}

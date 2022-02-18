@@ -2,7 +2,6 @@
 
 #include "utils.hpp"
 
-
 class Request {
 	private:
 	class Content
@@ -13,6 +12,7 @@ class Request {
 		bool		multipart;
 		std::string boundary;
 		bool		ended;
+		bool		chunked;
 		void init(const std::string &data, const std::map<std::string, std::string, casecomp> &headers)
 		{
 			std::map<std::string, std::string>::const_iterator it;
@@ -31,21 +31,62 @@ class Request {
 				}
 			}
 
+			if ((it = headers.find("Transfer-Encoding")) != headers.end())
+			{
+				// std::cout << "Transfer encoding!" << std::endl;
+				std::vector<std::string> fields = split(it->second, ", ");
+				if (contains(fields, std::string("chunked")))
+				{
+					chunked = true;
+					std::cout << "chunked!" << std::endl;
+				}
+			}
+
 			appendRaw(data);
 		}
+
+		bool decodeChunk(const std::string &chunkedData)
+		{
+			std::string line;
+			std::stringstream	ss(chunkedData);
+			size_t length = 0;
+
+			std::getline(ss, line);
+			size_t chunkSize = strtol(line.c_str(), NULL, 16);
+			while (std::getline(ss, line) && !line.empty())
+			{
+				if (chunkSize == 0)
+					return true;
+				size_t sep = line.find("\r");
+				// if (sep == std::string::npos)
+				// error
+				std::string key = line.substr(0, sep);
+				raw += key;
+				std::cout << key << std::endl;
+				// if (key.length() != chunkSize)
+				// 	std::cout << "problem" << key.length() << " " << chunkSize << std::endl;
+				length += key.length();
+
+				if (std::getline(ss, line))
+					chunkSize = strtol(line.c_str(), NULL, 16);
+			}
+			return false;
+		}
+
 		void appendRaw(const std::string &data)
 		{
-			//std::cout << "REM" << remaining << std::endl;
-
+			if (chunked)
+			{
+				if (decodeChunk(data))
+					ended = true;
+				return ;
+			}
 			remaining -= data.size();
 			raw += data;
-			//std::cout << data << std::endl;
-
-			//std::cout << "REM" << remaining << std::endl;
 			if (remaining <= 0)
 				ended = true;
 		}
-		Content() : remaining(0), multipart(false), ended(false) {}
+		Content() : remaining(0), multipart(false), ended(false), chunked(false) {}
 		~Content() {}
 	};
 	//TODO security
@@ -113,14 +154,14 @@ class Request {
 	~Request() {}
 };
 
-/*
+
 std::ostream &operator<<(std::ostream &os, const Request &req)
 {
 	os << "HEADERS [" << std::endl;
 	for (std::map<std::string, std::string, casecomp>::const_iterator it = req.headers.begin(); it != req.headers.end(); ++it)
-		os << "KEY: (" << it->first <<  ") VALUE: (" << it->second << ")"  << std::endl;
+		os << "KEY: (" << it->first <<  ") VALUE: (" << it->second << ")" << std::endl;
 	os << "]" << std::endl;
-	os << "RECEIVED CONTENT LENGTH: ("  << req.content.raw.length() << ")" << std::endl; 
+	os << "RECEIVED CONTENT LENGTH: (" << req.content.raw.length() << ")" << std::endl;
+	os << "RAW CONTENT: (" << req.content.raw << ")" << std::endl;
 	return os;
 }
-*/

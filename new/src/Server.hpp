@@ -146,6 +146,7 @@ class Server {
 	void handle_client(int fd, const Request &req)
 	{
 		std::cout << "handle client" << std::endl;
+		std::cout << req << std::endl;
 		if (req.url.find("..") != std::string::npos)
 			return (errorpage("400", "Bad Request", fd));
 		/*** FINDING ROUTE ***/
