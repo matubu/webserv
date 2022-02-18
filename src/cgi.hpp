@@ -62,8 +62,12 @@ void handleCgi(int fd, const Request &req, const std::string &uri ,const std::st
 		//env.add_env("REQUEST_METHOD", req.type);
 		env.add_env("SCRIPT_NAME", uri.c_str()); // chmin complet script
 
-		// Session et Cookie fonctionne avec les valeur setup plus tôt dans le for
-
+		/*
+			// Session et Cookie fonctionne avec les valeur setup plus tôt dans le for
+			Key actuel Cookie, mais fonctionne ==> Official key HTTP_COOKIE
+			HTTP_COOKIE
+			Les éventuels cookies. Une liste de paires clef=valeur contenant les cookies positionnés par le site, séparés par des points-virgules.
+		*/
 		/*
 			// POST
 			CONTENT_TYPE
