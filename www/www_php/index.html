@@ -4,16 +4,16 @@
 	<meta charset="UTF-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="stylesheet" href="/css_bryan/style.css">
+	<link rel="stylesheet" href="/www_php/style.css">
 	<title>Test form</title>
 </head>
 <body>
-	<form action="form.php">
+	<form action="/www_php/form.php">
 		<input type="text" name="test" placeholder="enter texte here">
 		<input type="submit" formmethod="GET" value="GET">
 		<input type="submit" formmethod="post" value="POST">
 	</form>
-	<form action="form.php" method="post" enctype="multipart/form-data">
+	<form action="/www_php/form.php" method="post" enctype="multipart/form-data">
 		<input type="file" name="userfile">
 		<input type="submit" value="Upload" name="submit">
 	</form>

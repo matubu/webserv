@@ -31,7 +31,7 @@ if (isset($_FILES['userfile']))
 
 	echo '</pre>';
 }
-echo "<a href=\"/\">return index</a>";
+echo "<a href=\"/www_php\">return index</a>";
 ?>
 </body>
 </html>

@@ -56,16 +56,32 @@ void handleCgi(int fd, const Request &req, const std::string &uri ,const std::st
 		gci_env env;
 		for (std::map<std::string, std::string, casecomp>::const_iterator it = req.headers.begin(); it != req.headers.end(); ++it)
 			env.add_env(it->first, it->second);
-		env.add_env("REQUEST_METHOD", req.type);
-		env.add_env("SCRIPT_NAME", req.url);
+		/*
+			Php ne trouve plus les fichier REQUEST_METHOD setup
+		*/
+		//env.add_env("REQUEST_METHOD", req.type);
+		env.add_env("SCRIPT_NAME", uri.c_str()); // chmin complet script
+
+		// Session et Cookie fonctionne avec les valeur setup plus tôt dans le for
+
+		/*
+			// POST
+			CONTENT_TYPE
+			Le type de contenu attaché à la requête, si des données sont attachées (comme lorsqu'un formulaire est envoyé avec la méthode « POST »).
+		
+			// GET
+			QUERY_STRING
+			Contient tout ce qui suit le « ? » dans l'URL envoyée par le client. Toutes les variables provenant d'un formulaire envoyé avec la méthode « GET » seront contenues dans le QUERY_STRING sous la forme « var1=val1&var2=val2&... ».
+		*/
 
 		dup2(s_cfd[0], 0);
 		close(s_cfd[0]);
 		dup2(c_sfd[1], 1);
 		close(c_sfd[1]);
 
-		char * const argv[] = { const_cast<char *>(cgi.c_str()), const_cast<char *>(uri.c_str()), 0 };
-		
+		char * const argv[] = { const_cast<char *>(cgi.c_str()),
+								const_cast<char *>(uri.c_str()), 0 };
+
 		if (execve(cgi.c_str(), argv, env.to_envp()) == -1)
 		{
 			// syserr("execve() " + cgi);
