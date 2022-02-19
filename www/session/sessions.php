@@ -6,4 +6,3 @@ if (isset($_SESSION["test"]))
 
 if (isset($_COOKIE["test"]))
 	echo "Ok Cookie<br>";
-

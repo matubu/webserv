@@ -7,6 +7,7 @@ server
 		cgi .py /usr/local/bin/python3
 		method GET
 		method POST
+		method DELETE
 	;
 	match /delete
 		autoindex true
@@ -20,6 +21,11 @@ server
 	;
 	match /custom403
 		root $PWD/www
+	;
+	match /session
+		index index.php
+		root $PWD/www/session
+		cgi .php /Users/bledda/.brew/bin/php-cgi
 	;
 	error 403 www/403.html
 	port 8080

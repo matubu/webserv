@@ -21,16 +21,19 @@
 
 	<main>
 	{{
-		<a class="link" href="$URL" data-isdir="$ISDIR">
+		<div class="link" data-isdir="$ISDIR" data-href="$URL">
 			<div>
 				<div></div>
-				<span>$NAME</span>
+				<a href="$URL">$NAME</a>
 			</div>
 			<div>
 				<span class="dim">$DATE</span>
 				<span>$SIZE</span>
+				<button class="icon-btn" onclick="fetch('$URL',{method:'DELETE'}).then(e=>this.parentNode.parentNode.remove()).catch(err=>console.error(err))">
+					<svg height="16" viewBox="0 0 16 16" width="16"><path fill="#fff" fill-rule="evenodd" d="M6.5 1.75a.25.25 0 01.25-.25h2.5a.25.25 0 01.25.25V3h-3V1.75zm4.5 0V3h2.25a.75.75 0 010 1.5H2.75a.75.75 0 010-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.675a.75.75 0 10-1.492.15l.66 6.6A1.75 1.75 0 005.405 15h5.19c.9 0 1.652-.681 1.741-1.576l.66-6.6a.75.75 0 00-1.492-.149l-.66 6.6a.25.25 0 01-.249.225h-5.19a.25.25 0 01-.249-.225l-.66-6.6z"></path></svg>
+				</button>
 			</div>
-		</a>
+		</div>
 	}}
 	</main>
 
@@ -63,19 +66,19 @@
 			let svg = '<svg viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m5 2H6v16h12v-9h-7V4z" fill="#42a5f5"/></svg>'
 			if (file.dataset.isdir)
 				svg = '<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.11 0-2 .89-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8c0-1.11-.9-2-2-2h-8l-2-2z" fill="#90a4ae"/></svg>'
-			else if (/\.html?$/.test(file.href))
+			else if (/\.html?$/.test(file.dataset.href))
 				svg = '<svg viewBox="0 0 24 24"><path d="m12 17.56 4.07-1.13.55-6.1H9.38L9.2 8.3h7.6l.2-1.99H7l.56 6.01h6.89l-.23 2.58-2.22.6-2.22-.6-.14-1.66h-2l.29 3.19L12 17.56M4.07 3h15.86L18.5 19.2 12 21l-6.5-1.8L4.07 3z" fill="#e44d26"/></svg>'
-			else if (file.href.endsWith('.css'))
+			else if (file.dataset.href.endsWith('.css'))
 				svg = '<svg viewBox="0 0 24 24"><path d="m5 3-.65 3.34h13.59L17.5 8.5H3.92l-.66 3.33h13.59l-.76 3.81-5.48 1.81-4.75-1.81.33-1.64H2.85l-.79 4 7.85 3 9.05-3 1.2-6.03.24-1.21L21.94 3H5z" fill="#42a5f5"/></svg>'
-			else if (/\.(avif|bmp|gif|ico|jpe?g|png|svg|tiff?|webp)$/.test(file.href))
+			else if (/\.(avif|bmp|gif|ico|jpe?g|png|svg|tiff?|webp)$/.test(file.dataset.href))
 				svg = '<svg viewBox="0 0 24 24"><path d="M12.976 9.072h5.368l-5.368-5.367v5.367M6.144 2.241h7.808l5.856 5.855v11.711a1.952 1.952 0 0 1-1.952 1.952H6.145a1.951 1.951 0 0 1-1.952-1.952V4.192c0-1.083.868-1.951 1.952-1.951m0 17.567h11.71V12l-3.903 3.904L12 13.952l-5.856 5.856M8.096 9.073a1.952 1.952 0 0 0-1.952 1.952 1.952 1.952 0 0 0 1.952 1.951 1.952 1.952 0 0 0 1.952-1.951 1.952 1.952 0 0 0-1.952-1.952z" fill="#26a69a"/></svg>'
-			else if (/\.(aac|midi?|mp3|oga|opus|wav|weba)$/.test(file.href))
+			else if (/\.(aac|midi?|mp3|oga|opus|wav|weba)$/.test(file.dataset.href))
 				svg = '<svg viewBox="0 0 24 24"><path d="M16 9V7h-4v5.5c-.42-.31-.93-.5-1.5-.5A2.5 2.5 0 0 0 8 14.5a2.5 2.5 0 0 0 2.5 2.5 2.5 2.5 0 0 0 2.5-2.5V9h3m-4-7a10 10 0 0 1 10 10 10 10 0 0 1-10 10A10 10 0 0 1 2 12 10 10 0 0 1 12 2z" fill="#ef5350"/></svg>'
-			else if (/\.(avi|mp4|mpeg|ogv|ts|webm|3gp|3g2)$/.test(file.href))
+			else if (/\.(avi|mp4|mpeg|ogv|ts|webm|3gp|3g2)$/.test(file.dataset.href))
 				svg = '<svg viewBox="0 0 24 24"><path d="m18 4 2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V4h-4z" fill="#ff9800"/></svg>'
-			else if (file.href.endsWith('js'))
+			else if (file.dataset.href.endsWith('js'))
 				svg = '<svg viewBox="0 0 24 24"><path d="M3 3h18v18H3V3m4.73 15.04c.4.85 1.19 1.55 2.54 1.55 1.5 0 2.53-.8 2.53-2.55v-5.78h-1.7V17c0 .86-.35 1.08-.9 1.08-.58 0-.82-.4-1.09-.87l-1.38.83m5.98-.18c.5.98 1.51 1.73 3.09 1.73 1.6 0 2.8-.83 2.8-2.36 0-1.41-.81-2.04-2.25-2.66l-.42-.18c-.73-.31-1.04-.52-1.04-1.02 0-.41.31-.73.81-.73.48 0 .8.21 1.09.73l1.31-.87c-.55-.96-1.33-1.33-2.4-1.33-1.51 0-2.48.96-2.48 2.23 0 1.38.81 2.03 2.03 2.55l.42.18c.78.34 1.24.55 1.24 1.13 0 .48-.45.83-1.15.83-.83 0-1.31-.43-1.67-1.03l-1.38.8z" fill="#ffca28"/></svg>'
-			else if (/\.(wasm|was?t)$/.test(file.href))
+			else if (/\.(wasm|was?t)$/.test(file.dataset.href))
 				svg = '<svg viewBox="0 0 300 300"><g><g fill="#7c4dff"><path fill="#7c4dff" d="m177.3 67.39-3.11 13.99h9.68l-3.57-13.99z" transform="translate(-188.25 29.65) scale(2.2365)"/><path transform="translate(-188.72 29.65) scale(2.2365)" d="M163.77 0a5.62 5.62 0 0 1 0 .58 12.34 12.34 0 0 1-12.34 12.34A12.33 12.33 0 0 1 139.11.58a5.62 5.62 0 0 1 0-.58H97.64v107.62h107.62V0zM149 96.1l-5.25-25.93h-.09L138 96.1h-7.22L122.6 58h7.13l4.88 25.94h.09L140.58 58h6.67l5.28 26.26h.1L158.19 58h7l-9.09 38.1zm39.26 0-2.43-8.48H173l-1.87 8.48H164l9.22-38.1h11.25l11.21 38.1z" fill="#7c4dff"/></g></g></svg>'
 			file.children[0].children[0].innerHTML = svg
 		}
