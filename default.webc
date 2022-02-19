@@ -27,7 +27,7 @@ server
 	name apple.com
 	name google.com
 	name google.com
-	body_size 2048
+	body_size 1024
 ;
 
 server

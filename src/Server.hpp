@@ -15,7 +15,6 @@ class Server {
 	std::map<int, std::string>		error;
 	size_t							body_size;
 	std::map<std::string, Route>	routes;
-	char							*buf;
 
 	std::map<int, Request>			ctx;
 
@@ -77,20 +76,32 @@ class Server {
 
 	bool read_client(int fd)
 	{
-		int	rc = recv(fd, buf, body_size, 0);
+		char	buf[2049];
+
+		int	rc = recv(fd, buf, 2048, 0);
 		if (rc == -1)
 		{
 			if (errno != EAGAIN && errno != EWOULDBLOCK)
 				throw std::runtime_error("error recv");
-			return false;
+			return (false);
 		}
 		buf[rc] = '\0';
 		Request &req = ctx[fd];
 
-		try { req.addContent(std::string(buf)); }
+		try {
+			req.addContent(std::string(buf));
+			if (req.content.raw.size() > body_size)
+			{
+				errorpage(413, error, fd);
+				ctx.erase(fd);
+				return (true);
+			}
+		}
 		catch (int e)
 		{
 			errorpage(e, error, fd);
+			ctx.erase(fd);
+			return (true);
 		}
 		if (req.ended())
 		{
@@ -98,9 +109,9 @@ class Server {
 			handle_client(fd, req);
 			close(fd);
 			ctx.erase(fd);
-			return true;
+			return (true);
 		}
-		return false;
+		return (false);
 	}
 
 	bool	tryroot(int fd, const Request &req, const Route &route, const std::string &path, std::string path_info = "")
@@ -259,8 +270,6 @@ class Server {
 		int		max_fd = sock;
 		FD_SET(sock, &master_set);
 
-		server->buf = new char[server->body_size + 1];
-
 		while (1) {
 			working_set = master_set;
 
@@ -301,7 +310,6 @@ class Server {
 				}
 			}
 		}
-		delete [] server->buf;
 		return (NULL);
 	}
 };

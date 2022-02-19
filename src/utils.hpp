@@ -276,6 +276,7 @@ void errorpage(int code, const std::map<int, std::string> &error, int sock)
 	if (it != error.end() && exist(it->second, &stats))
 	{
 		sendf(sock, it->second, stats);
+		close(sock);
 		return ;
 	}
 	std::string	file = replaceAll(replaceAll(g_ferrorpage,
@@ -283,4 +284,5 @@ void errorpage(int code, const std::map<int, std::string> &error, int sock)
 				"$CODE", atos(code));
 	file = headers(atos(code), file.size(), "text/html") + file;
 	send(sock, file.c_str(), file.size(), 0);
+	close(sock);
 }

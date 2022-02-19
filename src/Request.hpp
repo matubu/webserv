@@ -145,7 +145,12 @@ class Request {
 			init(raw);
 		else
 			content.appendRaw(raw);
+		if (content.raw.size() > static_cast<size_t>(((headers.count("Content-Length")) 
+									? atoi(headers["Content-Length"].c_str()) : 0)))
+										throw 413;
 	}
+
+
 
 	bool ended() const { return content.ended; }
 	
