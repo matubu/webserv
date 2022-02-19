@@ -157,10 +157,10 @@ std::string	urlsanitizer(std::string url)
 	return (url);
 }
 
-std::string	getQuery(std::string url)
+std::string    getQuery(const std::string &url)
 {
-	std::vector<std::string> tmp = split(url, "?");
-	return (tmp[tmp.size() - 1]);
+    std::vector<std::string> tmp = split(url, "?");
+    return (tmp.size() == 1) ? std::string() : tmp.back();
 }
 
 bool	exist(const std::string &name, struct stat *stats)

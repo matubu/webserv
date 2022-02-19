@@ -100,12 +100,14 @@ void handleCgi(
 		while ((n = read(c_sfd[0], buf, 1024)) != 0)
 		{
 			buf[n] = 0;
+			std::string tmp = buf;
+			if (tmp == "ERROR")
+			{
+				std::cout << "PAS CONTENT" << std::endl;
+				errorpage(500, error, "Internal Server Error", fd);
+				return ;
+			}
 			line += std::string(buf);
-		}
-		if (line == "ERROR")
-		{
-			errorpage(500, error, "Internal Server Error", fd);
-			return ;
 		}
 		send(fd, line.c_str(), line.size(), 0);
 		close(c_sfd[0]);
