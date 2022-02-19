@@ -69,7 +69,6 @@ class Server {
 		int	new_sock;
 
 		new_sock = accept(server_sock, NULL, NULL);
-		info("accept client");
 		fcntl(new_sock, F_SETFL, O_NONBLOCK);
 		return (new_sock);
 	}
@@ -108,7 +107,6 @@ class Server {
 		}
 		if (req.ended())
 		{
-			info("handling + closing connection");
 			handle_client(fd, req);
 			close(fd);
 			ctx.erase(fd);
@@ -135,7 +133,6 @@ class Server {
 			return (false);
 		std::string uri = route.root + path;
 		struct stat	stats;
-		std::cout << "tryuri " << uri << ENDL;
 		if (exist(uri + "/" + route.index, &stats))
 			uri += "/" + route.index;
 		else if (!exist(uri, &stats))
@@ -144,7 +141,6 @@ class Server {
 
 		if (req.type == "DELETE")
 		{
-			std::cout << uri << std::endl;
 			std::string header;
 			if (remove(uri.c_str()) == 0)
 				header = "HTTP/1.1 204 No Content\r\n\n"; // success
@@ -177,8 +173,6 @@ class Server {
 
 	void handle_client(int fd, const Request &req)
 	{
-		std::cout << "handle client" << std::endl;
-		std::cout << req << std::endl;
 		if (req.url.find("..") != std::string::npos)
 			return (errorpage(400, error, fd));
 		/*** FINDING ROUTE ***/

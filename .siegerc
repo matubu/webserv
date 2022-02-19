@@ -130,7 +130,7 @@ connection = close
 # Default number of simulated  concurrent users
 # ex: concurrent = 25
 #
-concurrent = 10000
+concurrent = 25
 
 #
 # Default duration of the siege.  The right hand argument has
@@ -149,7 +149,7 @@ concurrent = 10000
 # concurrent users, then siege will hit the server 200 times.
 # ex: reps = 20
 #
-reps = 100000
+reps = 1000
 
 #
 # Default URLs file, set at configuration time, the default
