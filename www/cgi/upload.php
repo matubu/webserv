@@ -1,5 +1,5 @@
 <?php
-$uploaddir = 'www/cgi/upload/';
+$uploaddir = 'upload/';
 
 if (isset($_FILES['file']))
 {
