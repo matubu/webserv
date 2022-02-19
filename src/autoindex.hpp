@@ -13,14 +13,14 @@ const std::string	g_fautoindex_repeat = g_fautoindex
 const std::string	g_fautoindex_after = g_fautoindex
 						.substr(g_fautoindex_end + 2);
 
-void	autoindex(int fd, const Request &req, const std::string &path)
+void	autoindex(int fd, const std::map<int, std::string> &error, const Request &req, const std::string &path)
 {
 	DIR				*dir;
 	struct dirent	*diread;
 	std::string		s = g_fautoindex_before;
 
 	if ((dir = opendir(path.c_str())) == NULL)
-		errorpage("403", "Forbidden", fd);
+		errorpage(403, error, "Forbidden", fd);
 	while ((diread = readdir(dir)))
 	{
 		if (!strcmp(diread->d_name, ".")

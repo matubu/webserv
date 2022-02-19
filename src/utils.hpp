@@ -215,17 +215,6 @@ std::string headers(const std::string &code, size_t len, const std::string &type
 	return ("HTTP/1.1 " + code + "\r\nContent-length: " + atos(len) + "\r\nContent-Type: " + type + "\r\n\r\n");
 }
 
-const	std::string g_ferrorpage = ftos(DEFAULT_ERROR_FILE);
-
-void errorpage(const std::string &code, const std::string &name, int sock)
-{
-	std::string	file = replaceAll(replaceAll(g_ferrorpage,
-				"$NAME", name),
-				"$CODE", code);
-	file = headers(code, file.size(), "text/html") + file;
-	send(sock, file.c_str(), file.size(), 0);
-}
-
 void sendf(int new_sock, const std::string &path, struct stat &stats)
 {
 	std::string header = headers("200 OK", stats.st_size, mime(path));
@@ -273,4 +262,23 @@ bool contains(const std::vector<T> &v, const T &elem)
 	if (std::find(v.begin(), v.end(), elem) != v.end())
 		return true;
 	return false;
+}
+
+const	std::string g_ferrorpage = ftos(DEFAULT_ERROR_FILE);
+
+void errorpage(int code, const std::map<int, std::string> &error, const std::string &name, int sock)
+{
+	struct stat	stats;
+	const std::map<int, std::string>::const_iterator	it = error.find(code);
+
+	if (it != error.end() && exist(it->second, &stats))
+	{
+		sendf(sock, it->second, stats);
+		return ;
+	}
+	std::string	file = replaceAll(replaceAll(g_ferrorpage,
+				"$NAME", name),
+				"$CODE", atos(code));
+	file = headers(atos(code), file.size(), "text/html") + file;
+	send(sock, file.c_str(), file.size(), 0);
 }

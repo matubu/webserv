@@ -63,7 +63,6 @@ class Server {
 
 	// close_server(all fd to close, ..)
 	// {
-
 	// }
 
 	int accept_new_client(int server_sock)
@@ -104,7 +103,7 @@ class Server {
 	{
 		if (!route.method.count(req.type))
 		{
-			errorpage("405", "Method Not Allowed", fd);
+			errorpage(405, error, "Method Not Allowed", fd);
 			return (true);
 		}
 		/*** REDIRECT ***/
@@ -141,7 +140,7 @@ class Server {
 		std::string cgi = findCgi(route.cgi, uri);
 		if (!cgi.empty())
 		{
-			handleCgi(fd, req, uri, cgi, path_info);
+			handleCgi(fd, error, req, uri, cgi, path_info);
 			return (true);
 		}
 
@@ -149,9 +148,9 @@ class Server {
 		if (stats.st_mode & S_IFDIR)
 		{
 			if (route.autoindex)
-				autoindex(fd, req, uri);
+				autoindex(fd, error, req, uri);
 			else
-				errorpage("403", "Forbidden", fd);
+				errorpage(403, error, "Forbidden", fd);
 			return (true);
 		}
 		sendf(fd, uri, stats);
@@ -164,7 +163,7 @@ class Server {
 		std::cout << "handle client" << std::endl;
 		std::cout << req << std::endl;
 		if (req.url.find("..") != std::string::npos)
-			return (errorpage("400", "Bad Request", fd));
+			return (errorpage(400, error, "Bad Request", fd));
 		/*** FINDING ROUTE ***/
 		std::string url = req.url;
 		std::string	path;
@@ -174,7 +173,7 @@ class Server {
 		{
 			if (routes.count(url))
 				break ;
-			if (url == "/") return (errorpage("404", "Not Found", fd));
+			if (url == "/") return (errorpage(404, error, "Not Found", fd));
 			size_t idx = url.find_last_of('/', url.size() - 2);
 			path = url.substr(idx + 1, url.size() - idx - 1) + path;
 			url = url.substr(0, idx + 1);
@@ -202,12 +201,14 @@ class Server {
 				if (find != std::string::npos)
 					file.replace(find, routes[url].root.size(), "");
 
-				tryroot(fd, req, routes[url], file, path_info);
+				if (!tryroot(fd, req, routes[url], file, path_info))
+					errorpage(404, error, "Not Found", fd);
 				return ;
 			}
 			file += "/" + *it;
 		}
-		tryroot(fd, req, routes[url], popchar(path));
+		if (!tryroot(fd, req, routes[url], popchar(path)))
+			errorpage(404, error, "Not Found", fd);
 	}
 
 	void	initsocket(int *sock)
@@ -287,7 +288,7 @@ class Server {
 					}
 					catch (std::exception &e)
 					{
-						errorpage("500", "Internal Server Error", fd);
+						errorpage(500, server->error, "Internal Server Error", fd);
 						server->info("error: " + std::string(e.what()) + ", closing connection");
 					}
 					FD_CLR(fd, &master_set);

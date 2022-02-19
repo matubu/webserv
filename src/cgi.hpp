@@ -41,8 +41,14 @@ class gci_env
 	}
 };
 
-
-void handleCgi(int fd, const Request &req, const std::string &uri ,const std::string &cgi, std::string path_info)
+void handleCgi(
+	int fd,
+	const std::map<int, std::string> &error,
+	const Request &req,
+	const std::string &uri,
+	const std::string &cgi,
+	const std::string &path_info
+	)
 {
 	int s_cfd[2]; //s_c == server to cgi
 	int c_sfd[2]; //c_s == cgi to server
@@ -69,13 +75,13 @@ void handleCgi(int fd, const Request &req, const std::string &uri ,const std::st
 		dup2(c_sfd[1], 1);
 		close(c_sfd[1]);
 
-		char * const argv[] = { const_cast<char *>(cgi.c_str()),
+		char *argv[] = { const_cast<char *>(cgi.c_str()),
 								const_cast<char *>(uri.c_str()), 0 };
 
 		if (execve(cgi.c_str(), argv, env.to_envp()) == -1)
 		{
 			// syserr("execve() " + cgi);
-			write(1, "ERROR", 6);
+			write(1, "ERROR", 6); // remove this
 		}
 		exit(0);
 	}
@@ -96,11 +102,9 @@ void handleCgi(int fd, const Request &req, const std::string &uri ,const std::st
 			buf[n] = 0;
 			line += std::string(buf);
 		}
-		if (line == "ERROR" || line.substr(0, 7) == "Status:")
+		if (line == "ERROR")
 		{
-			std::string error = line.substr(8);
-			std::vector<std::string> e = split(error, " ");
-			errorpage(e[0], e[1], fd);
+			errorpage(500, error, "Internal Server Error", fd);
 			return ;
 		}
 		send(fd, line.c_str(), line.size(), 0);

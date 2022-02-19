@@ -18,6 +18,10 @@ server
 	;
 	match /url
 	;
+	match /custom403
+		root $PWD/www
+	;
+	error 403 www/403.html
 	port 8080
 	host 0.0.0.0
 	name apple.com

@@ -5,8 +5,54 @@
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Webserv | Index</title>
+	<link rel="stylesheet" href="/style.css">
+	<style>
+		.badge {
+			color: rgb(var(--color));
+			background: rgba(var(--color), .2);
+			height: 10px;
+			padding: 7px;
+			border: 1px solid rgb(var(--color));
+			font-size: 15px;
+    		line-height: 11px;
+			border-radius: 10px
+		}
+	</style>
 </head>
 <body>
-	Hello world
+	<header>
+		<h1>Hello world</h1>
+	</header>
+	<main>
+		<a class="link" href="/thispagedoesnotexist">
+			<div>
+				<span class="badge" style="--color:245,180,16">404</span>
+				<span>Error page</span>
+			</div>
+			<div></div>
+		</a>
+		<a class="link" href="/custom403">
+			<div>
+				<span class="badge" style="--color:245,113,113">403</span>
+				<span>Custom error page</span>
+			</div>
+			<div></div>
+		</a>
+		<a class="link" href="/test">
+			<div>
+				<span class="badge" style="--color:163,113,247">autoindex</span>
+				<span>Autoindex page</span>
+			</div>
+			<div></div>
+		</a>
+	</main>
+	<footer class="dim">
+		<nav>
+			<span>WebServ - 2022, made by </span>
+			<a href="https://github.com/matubu" target="_blank">mberger-</a>,
+			<a href="https://github.com/mathieupi" target="_blank">mmehran</a>,
+			<a href="https://github.com/louchebem06" target="_blank">bledda</a>
+		</nav>
+	</footer>
 </body>
 </html>
