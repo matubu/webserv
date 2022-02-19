@@ -43,24 +43,3 @@ server
 		root $PWD
 	;
 ;
-
-// tester conf
-server
-	host localhost
-	port 8000
-	match /
-		root $PWD
-		method GET
-		cgi .bla cgi_tester
-	;
-	match /put_test/
-		root $PWD
-		method PUT
-	;
-	match /post_body/
-		method POST
-	;
-	match /directory/
-		method GET
-	;
-;

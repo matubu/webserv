@@ -122,11 +122,13 @@ class Request {
 		std::stringstream	ss(data);
 		std::getline(ss, request);
 		std::vector<std::string>	req = split(request);
-		if (req.size() != 3) throw std::runtime_error("invalid request");
+		if (req.size() != 3) throw 400;
 		type = req[0];
 		url = urlsanitizer(req[1]);
 		query = getQuery(req[1]);
 		protocol = req[2];
+		if (!isIn(type, 3, "GET", "POST", "DELETE") || protocol == "HTTP/1.1")
+			throw 400;
 
 		setHeaders(ss);
 

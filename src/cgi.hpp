@@ -37,7 +37,7 @@ class gci_env
 		for (i = 0; i < v.size(); ++i)
 			envp[i] = v[i];
 		envp[i] = 0;
-		return envp;
+		return (envp);
 	}
 };
 
@@ -55,7 +55,8 @@ void handleCgi(
 	pipe(s_cfd);
 	pipe(c_sfd);
 
-	if (fork() == 0) //cgi side
+	int	pid = fork();
+	if (pid == 0) //cgi side
 	{
 		close(s_cfd[1]);
 		close(c_sfd[0]);
@@ -79,10 +80,7 @@ void handleCgi(
 								const_cast<char *>(uri.c_str()), 0 };
 
 		if (execve(cgi.c_str(), argv, env.to_envp()) == -1)
-		{
-			// syserr("execve() " + cgi);
 			write(1, "ERROR", 6); // TODO remove this
-		}
 		exit(0);
 	}
 	else //server side
@@ -110,5 +108,6 @@ void handleCgi(
 		}
 		send(fd, line.c_str(), line.size(), 0);
 		close(c_sfd[0]);
+		waitpid(pid, NULL, WNOWAIT);
 	}
 }

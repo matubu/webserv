@@ -13,7 +13,11 @@ const std::string	g_fautoindex_repeat = g_fautoindex
 const std::string	g_fautoindex_after = g_fautoindex
 						.substr(g_fautoindex_end + 2);
 
-void	autoindex(int fd, const std::map<int, std::string> &error, const Request &req, const std::string &path)
+void	autoindex(
+	int fd,
+	const std::map<int, std::string> &error,
+	const Request &req,
+	const std::string &path)
 {
 	DIR				*dir;
 	struct dirent	*diread;
@@ -39,6 +43,7 @@ void	autoindex(int fd, const std::map<int, std::string> &error, const Request &r
 					"$SIZE", readable_fsize(stats.st_size)),
 					"$ISDIR", stats.st_mode & S_IFDIR ? "1" : "");
 	}
+	closedir(dir);
 	s += g_fautoindex_after;
 	s = headers("200 OK", s.size(), "text/html") + "\r\n" + s;
 	send(fd, s.c_str(), s.size(), 0);
