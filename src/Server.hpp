@@ -100,7 +100,7 @@ class Server {
 		return false;
 	}
 
-	bool	tryroot(int fd, const Request &req, const Route &route, const std::string &path)
+	bool	tryroot(int fd, const Request &req, const Route &route, const std::string &path, std::string path_info = "")
 	{
 		if (!route.method.count(req.type))
 		{
@@ -141,7 +141,7 @@ class Server {
 		std::string cgi = findCgi(route.cgi, uri);
 		if (!cgi.empty())
 		{
-			handleCgi(fd, req, uri, cgi);
+			handleCgi(fd, req, uri, cgi, path_info);
 			return (true);
 		}
 
@@ -169,17 +169,45 @@ class Server {
 		std::string url = req.url;
 		std::string	path;
 
-		std::cout << "GET " << url << ENDL;
+		url = replaceAll(url, "+", " ");
 		while (1)
 		{
-			std::cout << url << " " << path << ENDL;
-			if (routes.count(url) && tryroot(fd, req, routes[url], popchar(path)))
-				return ;
+			if (routes.count(url))
+				break ;
 			if (url == "/") return (errorpage("404", "Not Found", fd));
 			size_t idx = url.find_last_of('/', url.size() - 2);
 			path = url.substr(idx + 1, url.size() - idx - 1) + path;
 			url = url.substr(0, idx + 1);
 		}
+		
+		std::vector<std::string> u = split(path, "/");
+		if (u.size() == 0)
+		{
+			tryroot(fd, req, routes[url], popchar(path));
+			return ;
+		}
+		struct stat buff;
+		std::string file;
+		file = routes[url].root + *u.begin();
+		std::string path_info;
+		for (std::vector<std::string>::iterator it = u.begin() + 1; it != u.end(); it++)
+		{
+
+			if (stat(file.c_str(), &buff) != -1 && S_ISREG(buff.st_mode) != 0)
+			{
+				for (std::vector<std::string>::iterator it2 = it; it2 != u.end(); it2++)
+					path_info += *it2 + "/";
+				
+				size_t	find = file.find(routes[url].root);
+				if (find != std::string::npos)
+					file.replace(find, routes[url].root.size(), "");
+
+				tryroot(fd, req, routes[url], file, path_info);
+				return ;
+			}
+			file += "/" + *it;
+		}
+		tryroot(fd, req, routes[url], popchar(path));
 	}
 
 	void	initsocket(int *sock)

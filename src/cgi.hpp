@@ -42,7 +42,7 @@ class gci_env
 };
 
 
-void handleCgi(int fd, const Request &req, const std::string &uri ,const std::string &cgi)
+void handleCgi(int fd, const Request &req, const std::string &uri ,const std::string &cgi, std::string path_info)
 {
 	int s_cfd[2]; //s_c == server to cgi
 	int c_sfd[2]; //c_s == cgi to server
@@ -62,6 +62,7 @@ void handleCgi(int fd, const Request &req, const std::string &uri ,const std::st
 		env.add_env("PATH_TRANSLATED", uri);
 		env.add_env("SCRIPT_NAME", req.url);
 		env.add_env("QUERY_STRING", req.query);
+		env.add_env("PATH_INFO", path_info);
 
 		dup2(s_cfd[0], 0);
 		close(s_cfd[0]);

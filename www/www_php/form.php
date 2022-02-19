@@ -32,6 +32,10 @@ if (isset($_FILES['userfile']))
 	echo '</pre>';
 }
 echo "<a href=\"/www_php\">return index</a>";
+
+
+var_dump($_ENV);
+
 ?>
 </body>
 </html>
