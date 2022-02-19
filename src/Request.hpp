@@ -87,22 +87,27 @@ class Request {
 		Content() : remaining(0), multipart(false), ended(false), chunked(false) {}
 		~Content() {}
 	};
-	//TODO security
-	void addHeader(const std::string &header)
+	void addHeader(const std::string &header, const std::set<std::string> &name)
 	{
 		size_t sep = header.find(":");
 		if (sep == std::string::npos) throw 400;
 		std::string key = header.substr(0, sep);
 		std::string value = header.substr(sep + 1);
+		if (strtolower(key) == "host")
+		{
+			std::string	host = trim(split(value, ":")[0]);
+			if (!name.count(host) && host != "localhost" && !isip(host))
+				throw 0;
+		}
 		trim(key, " \n\t\r");
 		trim(value, " \n\t\r");
 		headers[key] = value;
 	}
-	void setHeaders(std::stringstream &ss)
+	void setHeaders(std::stringstream &ss, const std::set<std::string> &name)
 	{
 		std::string header;
 		while (std::getline(ss, header) && !header.empty() && header != "\r")
-			addHeader(header);
+			addHeader(header, name);
 	}
 	public:
 	std::string	request;
@@ -115,7 +120,7 @@ class Request {
 	Content		content;
 	bool		empty;
 
-	void init(const std::string &data)
+	void init(const std::string &data, const std::set<std::string> &name)
 	{
 		empty = false;
 
@@ -126,25 +131,25 @@ class Request {
 		type = req[0];
 		url = urlsanitizer(req[1]);
 		query = getQuery(req[1]);
-		protocol = req[2];
-		if (!isIn(type, 3, "GET", "POST", "DELETE") || protocol == "HTTP/1.1")
+		protocol = trim(req[2], "\r");
+		if (!isIn(type, 3, "GET", "POST", "DELETE") || protocol != "HTTP/1.1")
 			throw 400;
 
-		setHeaders(ss);
+		setHeaders(ss, name);
 
 		if (ss.tellg() != -1)
 			content.init(data.substr(ss.tellg()), headers);
 	}
 
-	Request(const std::string &data)
+	Request(const std::string &data, const std::set<std::string> &name)
 	{
-		init(data);
+		init(data, name);
 	}
 
-	void addContent(const std::string &raw)
+	void addContent(const std::string &raw, const std::set<std::string> &name)
 	{
 		if (empty)
-			init(raw);
+			init(raw, name);
 		else
 			content.appendRaw(raw);
 		if (content.raw.size() > static_cast<size_t>(((headers.count("Content-Length")) 

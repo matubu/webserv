@@ -11,7 +11,7 @@ class Server {
 	int								sock;
 	int								port;
 	in_addr_t						host;
-	std::set<std::string>			name; //TODO use it
+	std::set<std::string>			name;
 	std::map<int, std::string>		error;
 	size_t							body_size;
 	std::map<std::string, Route>	routes;
@@ -89,7 +89,7 @@ class Server {
 		Request &req = ctx[fd];
 
 		try {
-			req.addContent(std::string(buf));
+			req.addContent(std::string(buf), name);
 			if (req.content.raw.size() > body_size)
 			{
 				errorpage(413, error, fd);
@@ -99,7 +99,10 @@ class Server {
 		}
 		catch (int e)
 		{
-			errorpage(e, error, fd);
+			if (e)
+				errorpage(e, error, fd);
+			else
+				close(fd);
 			ctx.erase(fd);
 			return (true);
 		}
@@ -172,7 +175,6 @@ class Server {
 		return (true);
 	}
 
-	//TODO put error if request /../ or other outside root
 	void handle_client(int fd, const Request &req)
 	{
 		std::cout << "handle client" << std::endl;
@@ -242,7 +244,7 @@ class Server {
 		if (setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1)
 			throw "setsockopt failed";
 
-		if (bind(*sock, (struct sockaddr *) &addr, sizeof(addr)) == -1)
+		if (bind(*sock, (struct sockaddr *)&addr, sizeof(addr)) == -1)
 			throw "cannot bind";
 
 		if (listen(*sock, MAX_CONNECTIONS) == -1)

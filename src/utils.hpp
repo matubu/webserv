@@ -286,3 +286,8 @@ void errorpage(int code, const std::map<int, std::string> &error, int sock)
 	send(sock, file.c_str(), file.size(), 0);
 	close(sock);
 }
+
+bool	isip(const std::string &host)
+{
+	return (host.find_first_not_of("0123456789.") == std::string::npos);
+}
