@@ -3,5 +3,5 @@ webserv
 .vscode
 src/main
 siege
-uploaded_files/*
-!uploaded_files/.gitkeep
+www/cgi/upload/*
+!www/cgi/upload/.gitkeep

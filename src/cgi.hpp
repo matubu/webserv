@@ -81,7 +81,7 @@ void handleCgi(
 		if (execve(cgi.c_str(), argv, env.to_envp()) == -1)
 		{
 			// syserr("execve() " + cgi);
-			write(1, "ERROR", 6); // remove this
+			write(1, "ERROR", 6); // TODO remove this
 		}
 		exit(0);
 	}

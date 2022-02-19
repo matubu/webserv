@@ -15,7 +15,7 @@ h1 {
 	font: 900 50px 'Lato', sans-serif;
 	margin: 0
 }
-* {font-family: sans-serif;}
+html, input {font-family: sans-serif}
 footer {
 	display: flex;
 	justify-content: center
@@ -55,4 +55,15 @@ main {
 .link svg {
 	width: 25px;
 	height: 25px
+}
+.badge {
+	user-select: none;
+	color: rgb(var(--color));
+	background: rgba(var(--color), .2);
+	height: 10px;
+	padding: 7px;
+	border: 1px solid rgb(var(--color));
+	font-size: 15px;
+	line-height: 11px;
+	border-radius: 10px
 }
