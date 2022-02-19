@@ -21,6 +21,11 @@ server
 	match /custom403
 		root $PWD/www
 	;
+	match /session
+		index index.php
+		root $PWD/www/session
+		cgi .php /Users/bledda/.brew/bin/php-cgi
+	;
 	error 403 www/403.html
 	port 8080
 	host 0.0.0.0

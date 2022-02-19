@@ -3,8 +3,8 @@ session_start();
 
 $_SESSION["test"] = rand();
 echo $_SESSION["test"];
-//$_COOKIE["test"] = "ok";
-//setcookie("test", "ok");
+if (!isset($_COOKIE["test"]))
+	setcookie("test", "ok");
 ?>
 
-<a href="/coo_sess/sessions.php">View value</a>
+<a href="/session/sessions.php">view session info</a>
