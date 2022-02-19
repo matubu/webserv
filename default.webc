@@ -7,6 +7,7 @@ server
 		cgi .py /usr/local/bin/python3
 		method GET
 		method POST
+		method DELETE
 	;
 	match /delete
 		autoindex true
