@@ -53,22 +53,28 @@ class Request {
 
 			std::getline(ss, line);
 			size_t chunkSize = strtol(line.c_str(), NULL, 16);
-			while (std::getline(ss, line) && !line.empty())
+			size_t currChunkSize = 0;
+			while (std::getline(ss, line))
 			{
+				// std::cout << "chunkSize:" << chunkSize << std::endl;
 				if (chunkSize == 0)
 					return true;
-				size_t sep = line.find("\r");
-				// if (sep == std::string::npos)
-				// error
-				std::string key = line.substr(0, sep);
-				raw += key;
-				std::cout << key << std::endl;
-				// if (key.length() != chunkSize)
-				// 	std::cout << "problem" << key.length() << " " << chunkSize << std::endl;
-				length += key.length();
-
-				if (std::getline(ss, line))
+				currChunkSize += line.length() + 1;
+				if (currChunkSize <= chunkSize)
+				{
+					line = trim(line, "\r");
+					line += "\n";
+					raw += line;
+					// std::cout << "line: " << line << std::endl;
+					// std::cout << "currSize: " << currChunkSize << std::endl;
+					// std::cout << "" << std::endl;
+				}
+				if (currChunkSize == chunkSize && std::getline(ss, line))
+				{
 					chunkSize = strtol(line.c_str(), NULL, 16);
+					length += currChunkSize;
+					currChunkSize = 0;
+				}
 			}
 			return false;
 		}
