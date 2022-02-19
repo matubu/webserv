@@ -8,6 +8,11 @@ server
 		method GET
 		method POST
 	;
+	match /delete
+		autoindex true
+		root $PWD/www
+		method DELETE
+	;
 	match /hello
 		redirect 307 https://google.com
 	;

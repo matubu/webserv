@@ -103,7 +103,10 @@ class Server {
 	bool	tryroot(int fd, const Request &req, const Route &route, const std::string &path)
 	{
 		if (!route.method.count(req.type))
-			return (false);
+		{
+			errorpage("405", "Method Not Allowed", fd);
+			return (true);
+		}
 		/*** REDIRECT ***/
 		if (route.redirect.first)
 		{
@@ -120,6 +123,19 @@ class Server {
 			uri += "/" + route.index;
 		else if (!exist(uri, &stats))
 			return (false);
+
+
+		if (req.type == "DELETE")
+		{
+			std::cout << uri << std::endl;
+			std::string header;
+			if (remove(uri.c_str()) == 0)
+				header = "HTTP/1.1 204 No Content\r\n\n"; // success
+			else
+				header = "HTTP/1.1 500 Internal Server Error\r\n\n"; // fail
+			send(fd, header.c_str(), header.size(), 0);
+			return (true);
+		}
 
 		/*** CGI ***/
 		std::string cgi = findCgi(route.cgi, uri);
