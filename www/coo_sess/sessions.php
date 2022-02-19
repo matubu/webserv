@@ -2,7 +2,7 @@
 session_start();
 
 if (isset($_SESSION["test"]))
-	echo "Ok Session<br>";
+	echo $_SESSION["test"] . "<br>";
 
 if (isset($_COOKIE["test"]))
 	echo "Ok Cookie<br>";

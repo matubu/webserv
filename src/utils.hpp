@@ -157,6 +157,12 @@ std::string	urlsanitizer(std::string url)
 	return (url);
 }
 
+std::string	getQuery(std::string url)
+{
+	std::vector<std::string> tmp = split(url, "?");
+	return (tmp[tmp.size() - 1]);
+}
+
 bool	exist(const std::string &name, struct stat *stats)
 { return (stat(name.c_str(), stats) == 0); }
 

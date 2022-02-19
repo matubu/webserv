@@ -111,6 +111,7 @@ class Request {
 	std::string	request;
 	std::string	type;
 	std::string	url;
+	std::string	query;
 	std::string	protocol;
 
 	std::map<std::string, std::string, casecomp> headers;
@@ -127,6 +128,7 @@ class Request {
 		if (req.size() != 3) throw std::runtime_error("invalid request");
 		type = req[0];
 		url = urlsanitizer(req[1]);
+		query = getQuery(req[1]);
 		protocol = req[2];
 
 		setHeaders(ss);

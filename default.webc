@@ -3,7 +3,7 @@ server
 		autoindex true
 		index index.html
 		root $PWD/www
-		cgi .php /usr/local/opt/php/bin/php-cgi
+		cgi .php /Users/bledda/.brew/bin/php-cgi
 		cgi .py /usr/local/bin/python3
 		method GET
 		method POST
@@ -14,7 +14,7 @@ server
 	match /url
 	;
 	port 8080
-	host localhost
+	host 0.0.0.0
 	name apple.com
 	name google.com
 	name google.com
