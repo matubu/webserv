@@ -33,13 +33,9 @@ class Request {
 
 			if ((it = headers.find("Transfer-Encoding")) != headers.end())
 			{
-				// std::cout << "Transfer encoding!" << std::endl;
 				std::vector<std::string> fields = split(it->second, ", ");
 				if (contains(fields, std::string("chunked")))
-				{
 					chunked = true;
-					std::cout << "chunked!" << std::endl;
-				}
 			}
 
 			appendRaw(data);
@@ -56,7 +52,6 @@ class Request {
 			size_t currChunkSize = 0;
 			while (std::getline(ss, line))
 			{
-				// std::cout << "chunkSize:" << chunkSize << std::endl;
 				if (chunkSize == 0)
 					return true;
 				currChunkSize += line.length() + 1;
@@ -65,9 +60,6 @@ class Request {
 					line = trim(line, "\r");
 					line += "\n";
 					raw += line;
-					// std::cout << "line: " << line << std::endl;
-					// std::cout << "currSize: " << currChunkSize << std::endl;
-					// std::cout << "" << std::endl;
 				}
 				if (currChunkSize == chunkSize && std::getline(ss, line))
 				{
@@ -99,8 +91,7 @@ class Request {
 	void addHeader(const std::string &header)
 	{
 		size_t sep = header.find(":");
-		// if (sep == std::string::npos)
-			// error
+		if (sep == std::string::npos) throw 400;
 		std::string key = header.substr(0, sep);
 		std::string value = header.substr(sep + 1);
 		trim(key, " \n\t\r");

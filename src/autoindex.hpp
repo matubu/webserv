@@ -20,7 +20,7 @@ void	autoindex(int fd, const std::map<int, std::string> &error, const Request &r
 	std::string		s = g_fautoindex_before;
 
 	if ((dir = opendir(path.c_str())) == NULL)
-		errorpage(403, error, "Forbidden", fd);
+		errorpage(403, error, fd);
 	while ((diread = readdir(dir)))
 	{
 		if (!strcmp(diread->d_name, ".")

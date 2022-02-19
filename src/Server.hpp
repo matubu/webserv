@@ -87,7 +87,11 @@ class Server {
 		buf[rc] = '\0';
 		Request &req = ctx[fd];
 
-		req.addContent(std::string(buf));
+		try { req.addContent(std::string(buf)); }
+		catch (int e)
+		{
+			errorpage(e, error, fd);
+		}
 		if (req.ended())
 		{
 			info("handling + closing connection");
@@ -103,7 +107,7 @@ class Server {
 	{
 		if (!route.method.count(req.type))
 		{
-			errorpage(405, error, "Method Not Allowed", fd);
+			errorpage(405, error, fd);
 			return (true);
 		}
 		/*** REDIRECT ***/
@@ -150,7 +154,7 @@ class Server {
 			if (route.autoindex)
 				autoindex(fd, error, req, uri);
 			else
-				errorpage(403, error, "Forbidden", fd);
+				errorpage(403, error, fd);
 			return (true);
 		}
 		sendf(fd, uri, stats);
@@ -163,7 +167,7 @@ class Server {
 		std::cout << "handle client" << std::endl;
 		std::cout << req << std::endl;
 		if (req.url.find("..") != std::string::npos)
-			return (errorpage(400, error, "Bad Request", fd));
+			return (errorpage(400, error, fd));
 		/*** FINDING ROUTE ***/
 		std::string url = req.url;
 		std::string	path;
@@ -173,7 +177,7 @@ class Server {
 		{
 			if (routes.count(url))
 				break ;
-			if (url == "/") return (errorpage(404, error, "Not Found", fd));
+			if (url == "/") return (errorpage(404, error, fd));
 			size_t idx = url.find_last_of('/', url.size() - 2);
 			path = url.substr(idx + 1, url.size() - idx - 1) + path;
 			url = url.substr(0, idx + 1);
@@ -202,13 +206,13 @@ class Server {
 					file.replace(find, routes[url].root.size(), "");
 
 				if (!tryroot(fd, req, routes[url], file, path_info))
-					errorpage(404, error, "Not Found", fd);
+					errorpage(404, error, fd);
 				return ;
 			}
 			file += "/" + *it;
 		}
 		if (!tryroot(fd, req, routes[url], popchar(path)))
-			errorpage(404, error, "Not Found", fd);
+			errorpage(404, error, fd);
 	}
 
 	void	initsocket(int *sock)
@@ -288,7 +292,7 @@ class Server {
 					}
 					catch (std::exception &e)
 					{
-						errorpage(500, server->error, "Internal Server Error", fd);
+						errorpage(500, server->error, fd);
 						server->info("error: " + std::string(e.what()) + ", closing connection");
 					}
 					FD_CLR(fd, &master_set);

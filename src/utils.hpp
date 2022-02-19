@@ -23,6 +23,7 @@
 #include <sys/select.h>
 #include <math.h>
 #include "mime.hpp"
+#include "HttpCode.hpp"
 
 #ifdef __APPLE__
 # include <sys/socket.h>
@@ -266,10 +267,11 @@ bool contains(const std::vector<T> &v, const T &elem)
 
 const	std::string g_ferrorpage = ftos(DEFAULT_ERROR_FILE);
 
-void errorpage(int code, const std::map<int, std::string> &error, const std::string &name, int sock)
+void errorpage(int code, const std::map<int, std::string> &error, int sock)
 {
 	struct stat	stats;
 	const std::map<int, std::string>::const_iterator	it = error.find(code);
+	HttpCode HttpCode;
 
 	if (it != error.end() && exist(it->second, &stats))
 	{
@@ -277,7 +279,7 @@ void errorpage(int code, const std::map<int, std::string> &error, const std::str
 		return ;
 	}
 	std::string	file = replaceAll(replaceAll(g_ferrorpage,
-				"$NAME", name),
+				"$NAME", HttpCode.getError(code)),
 				"$CODE", atos(code));
 	file = headers(atos(code), file.size(), "text/html") + file;
 	send(sock, file.c_str(), file.size(), 0);

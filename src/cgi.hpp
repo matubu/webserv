@@ -103,8 +103,7 @@ void handleCgi(
 			std::string tmp = buf;
 			if (tmp == "ERROR")
 			{
-				std::cout << "PAS CONTENT" << std::endl;
-				errorpage(500, error, "Internal Server Error", fd);
+				errorpage(500, error, fd);
 				return ;
 			}
 			line += std::string(buf);
