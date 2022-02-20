@@ -149,7 +149,7 @@ concurrent = 25
 # concurrent users, then siege will hit the server 200 times.
 # ex: reps = 20
 #
-reps = 1000
+reps = 100
 
 #
 # Default URLs file, set at configuration time, the default

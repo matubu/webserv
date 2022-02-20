@@ -44,6 +44,8 @@ siege_install:
 
 siege_test_static:
 	cd siege/src && ./siege --rc=../../.siegerc http://localhost:8080
+siege_test_cgi:
+	cd siege/src && ./siege --rc=../../.siegerc http://localhost:8080/cgi/info.py
 siege: siege_test_static
 
 .PHONY: all run clean fclean re \

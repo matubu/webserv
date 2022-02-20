@@ -50,13 +50,13 @@ void handleCgi(
 	const std::string &path_info
 	)
 {
-	int s_cfd[2]; //s_c == server to cgi
-	int c_sfd[2]; //c_s == cgi to server
+	int s_cfd[2]; // server to cgi
+	int c_sfd[2]; // cgi to server
 	pipe(s_cfd);
 	pipe(c_sfd);
 
 	int	pid = fork();
-	if (pid == 0) //cgi side
+	if (pid == 0)
 	{
 		close(s_cfd[1]);
 		close(c_sfd[0]);
@@ -80,10 +80,12 @@ void handleCgi(
 								const_cast<char *>(uri.c_str()), 0 };
 
 		if (execve(cgi.c_str(), argv, env.to_envp()) == -1)
-			write(1, "ERROR", 6); // TODO remove this
+			write(1, "ERROR", 6);
+		close(0);
+		close(1);
 		exit(0);
 	}
-	else //server side
+	else
 	{
 		char buf[1024 + 1];
 
@@ -102,12 +104,14 @@ void handleCgi(
 			if (tmp == "ERROR")
 			{
 				errorpage(500, error, fd);
+				close(c_sfd[0]);
 				return ;
 			}
 			line += std::string(buf);
 		}
 		send(fd, line.c_str(), line.size(), 0);
 		close(c_sfd[0]);
-		waitpid(pid, NULL, WNOWAIT);
+		waitpid(pid, NULL, 0);
+		//waitpid(pid, NULL, WNOWAIT);
 	}
 }

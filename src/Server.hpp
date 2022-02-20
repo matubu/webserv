@@ -79,11 +79,7 @@ class Server {
 
 		int	rc = recv(fd, buf, 2048, 0);
 		if (rc == -1)
-		{
-			if (errno != EAGAIN && errno != EWOULDBLOCK)
-				throw std::runtime_error("error recv");
 			return (false);
-		}
 		buf[rc] = '\0';
 		Request &req = ctx[fd];
 
