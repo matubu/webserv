@@ -60,19 +60,6 @@ class Server {
 		}
 	}
 
-	// close_server(all fd to close, ..)
-	// {
-	// }
-
-	int accept_new_client(int server_sock)
-	{
-		int	new_sock;
-
-		new_sock = accept(server_sock, NULL, NULL);
-		fcntl(new_sock, F_SETFL, O_NONBLOCK);
-		return (new_sock);
-	}
-
 	bool read_client(int fd)
 	{
 		char	buf[2049];
@@ -88,7 +75,6 @@ class Server {
 			if (req.content.raw.size() > body_size)
 			{
 				errorpage(413, error, fd);
-				ctx.erase(fd);
 				return (true);
 			}
 		}
@@ -96,16 +82,11 @@ class Server {
 		{
 			if (e)
 				errorpage(e, error, fd);
-			else
-				close(fd);
-			ctx.erase(fd);
 			return (true);
 		}
 		if (req.ended())
 		{
 			handle_client(fd, req);
-			close(fd);
-			ctx.erase(fd);
 			return (true);
 		}
 		return (false);
@@ -218,7 +199,7 @@ class Server {
 			errorpage(404, error, fd);
 	}
 
-	void	initsocket(int *sock)
+	void	initsocket(int *sock, int *kq)
 	{
 		struct	sockaddr_in	addr;
 
@@ -239,6 +220,9 @@ class Server {
 
 		if (listen(*sock, MAX_CONNECTIONS) == -1)
 			throw "cannot listen";
+
+		if ((*kq = kqueue()) == -1)
+			throw "cannot create kqueue";
 	}
 
 	/*** START ***/
@@ -246,60 +230,89 @@ class Server {
 	{
 		server->info("starting ...");
 
-		int						sock, new_sock;
+		int							sock, new_sock, kq;
+		std::vector<struct kevent>	change_lst;
+		std::vector<struct kevent>	events_lst;
 
-		try { server->initsocket(&sock); }
+		events_lst.resize(1);
+
+		try { server->initsocket(&sock, &kq); }
 		catch (const char *e)
 		{
 			server->syserr(e);
 			return (NULL);
 		}
 
+		server->info("sock " + atos(sock));
+
+		change_lst.resize(1);
+		EV_SET(change_lst.data(), sock, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
+
 		server->info("started");
 
-   		fd_set	master_set, working_set;
-		FD_ZERO(&master_set);
-		int		max_fd = sock;
-		FD_SET(sock, &master_set);
-
 		while (1) {
-			working_set = master_set;
-
-			int	count;
-			if ((count = select(max_fd + 1, &working_set, NULL, NULL, NULL)) == -1)
+			int	evt;
+			server->info("calling kevent");
+			if ((evt = kevent(kq,
+					change_lst.data(), change_lst.size(), 
+					events_lst.data(), events_lst.size(),
+					NULL)) == -1)
 			{
-				server->syserr("cannot select");
+				server->syserr("kevent failed");
 				break ;
 			}
-			for (int fd = 0; count && fd <= max_fd; ++fd)
+			change_lst.clear();
+			std::cout << "new events " << evt << " " << events_lst.size() << std::endl;
+			while (evt--)
 			{
-				if (!FD_ISSET(fd, &working_set)) continue ;
-				count--;
-				if (fd == sock)
+				if (events_lst[evt].flags & EV_ERROR)
 				{
-					if ((new_sock = server->accept_new_client(sock)) == -1)
+					std::cout << "event error " << events_lst[evt].ident << " " << strerror(events_lst[evt].data) << std::endl;
+					continue ;
+				}
+				if (events_lst[evt].ident == (uintptr_t)sock)
+				{
+					//for in clienttoaccept
+					new_sock = accept(events_lst[evt].ident, NULL, NULL);
+					if (new_sock == -1)
 					{
-						server->syserr(ENDL "cannot accept client");
+						server->syserr("cannot accept client");
 						continue ;
 					}
-					FD_SET(new_sock, &master_set);
-					max_fd = std::max(max_fd, new_sock);
+					fcntl(new_sock, F_SETFL, O_NONBLOCK);
+					change_lst.resize(change_lst.size() + 1);
+					events_lst.resize(events_lst.size() + 1);
+					EV_SET(&*(change_lst.end() - 1), new_sock, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
+					server->info("client accepted");
+					continue ;
 				}
-				else
+				if (events_lst[evt].filter & EVFILT_READ)
 				{
+					server->info("can read");
 					try {
-						if (!server->read_client(fd))
+						if (!server->read_client(events_lst[evt].ident))
 							continue ;
 					}
 					catch (std::exception &e)
 					{
-						errorpage(500, server->error, fd);
-						server->info("error: " + std::string(e.what()) + ", closing connection");
+						errorpage(500, server->error, events_lst[evt].ident);
 					}
-					FD_CLR(fd, &master_set);
-					close(fd);
-					server->ctx.erase(fd);
 				}
+				if (events_lst[evt].filter & EVFILT_READ || events_lst[evt].flags & EV_EOF)
+				{
+					server->info("closing connection");
+					close(events_lst[evt].ident);
+					server->ctx.erase(events_lst[evt].ident);
+					events_lst.erase(events_lst.begin() + evt);
+					continue ;
+				}
+				if (events_lst[evt].filter & EVFILT_WRITE)
+				{
+					server->info("can write");
+					//
+					continue ;
+				}
+				server->info("nothing ?");
 			}
 		}
 		return (NULL);
