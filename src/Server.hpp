@@ -3,8 +3,8 @@
 #include "Route.hpp"
 #include "Request.hpp"
 #include "utils.hpp"
-#include "autoindex.hpp"
 #include "cgi.hpp"
+#include "Response.hpp"
 
 class Server {
 	public:
@@ -74,35 +74,36 @@ class Server {
 			req.addContent(std::string(buf), name);
 			if (req.content.raw.size() > body_size)
 			{
-				errorpage(413, error, fd);
+				req.response.setError(413, error);
 				return (true);
 			}
 		}
 		catch (int e)
 		{
 			if (e)
-				errorpage(e, error, fd);
+				req.response.setError(e, error);
 			return (true);
 		}
 		if (req.ended())
 		{
-			handle_client(fd, req);
+			handle_client(req);
 			return (true);
 		}
 		return (false);
 	}
 
-	bool	tryroot(int fd, const Request &req, const Route &route, const std::string &path, std::string path_info = "")
+	bool	tryroot(Request &req, const Route &route, const std::string &path, std::string path_info = "")
 	{
+		std::cout << "try root" << std::endl;
 		if (!route.method.count(req.type))
 		{
-			errorpage(405, error, fd);
+			req.response.setError(405, error);
 			return (true);
 		}
 		/*** REDIRECT ***/
 		if (route.redirect.first)
 		{
-			redirect(fd, route.redirect.first, route.redirect.second + "/" + path);
+			req.response.setRedirect(route.redirect.first, route.redirect.second + "/" + path);
 			return (true);
 		}
 
@@ -120,10 +121,9 @@ class Server {
 		{
 			std::string header;
 			if (remove(uri.c_str()) == 0)
-				header = "HTTP/1.1 204 No Content\r\n\n"; // success
+				req.response.setBody("HTTP/1.1 204 No Content\r\n\n", "");
 			else
-				header = "HTTP/1.1 500 Internal Server Error\r\n\n"; // fail
-			send(fd, header.c_str(), header.size(), 0);
+				req.response.setBody("HTTP/1.1 500 Internal Server Error\r\n\n", "");
 			return (true);
 		}
 
@@ -131,7 +131,7 @@ class Server {
 		std::string cgi = findCgi(route.cgi, uri);
 		if (!cgi.empty())
 		{
-			handleCgi(fd, error, req, uri, cgi, path_info);
+			handleCgi(error, req, uri, cgi, path_info);
 			return (true);
 		}
 
@@ -139,19 +139,20 @@ class Server {
 		if (stats.st_mode & S_IFDIR)
 		{
 			if (route.autoindex)
-				autoindex(fd, error, req, uri);
+				req.response.setAutoindex(error, req.url, uri);
 			else
-				errorpage(403, error, fd);
+				req.response.setError(403, error);
 			return (true);
 		}
-		sendf(fd, uri, stats);
+		req.response.setFd(headers(200, stats.st_size, mime(uri)), open(uri.c_str(), O_RDONLY));
 		return (true);
 	}
 
-	void handle_client(int fd, const Request &req)
+	void handle_client(Request &req)
 	{
+		std::cout << "handle client" << std::endl;
 		if (req.url.find("..") != std::string::npos)
-			return (errorpage(400, error, fd));
+			return (req.response.setError(400, error));
 		/*** FINDING ROUTE ***/
 		std::string url = req.url;
 		std::string	path;
@@ -161,7 +162,7 @@ class Server {
 		{
 			if (routes.count(url))
 				break ;
-			if (url == "/") return (errorpage(404, error, fd));
+			if (url == "/") return (req.response.setError(404, error));
 			size_t idx = url.find_last_of('/', url.size() - 2);
 			path = url.substr(idx + 1, url.size() - idx - 1) + path;
 			url = url.substr(0, idx + 1);
@@ -170,7 +171,7 @@ class Server {
 		std::vector<std::string> u = split(path, "/");
 		if (u.size() == 0)
 		{
-			tryroot(fd, req, routes[url], popchar(path));
+			tryroot(req, routes[url], popchar(path));
 			return ;
 		}
 		struct stat buff;
@@ -189,14 +190,14 @@ class Server {
 				if (find != std::string::npos)
 					file.replace(find, routes[url].root.size(), "");
 
-				if (!tryroot(fd, req, routes[url], file, path_info))
-					errorpage(404, error, fd);
+				if (!tryroot(req, routes[url], file, path_info))
+					req.response.setError(404, error);
 				return ;
 			}
 			file += "/" + *it;
 		}
-		if (!tryroot(fd, req, routes[url], popchar(path)))
-			errorpage(404, error, fd);
+		if (!tryroot(req, routes[url], popchar(path)))
+			req.response.setError(404, error);
 	}
 
 	void	initsocket(int *sock, int *kq)
@@ -250,7 +251,8 @@ class Server {
 
 		server->info("started");
 
-		while (1) {
+		while (1)
+		{
 			int	evt;
 			server->info("calling kevent");
 			if ((evt = kevent(kq,
@@ -262,7 +264,7 @@ class Server {
 				break ;
 			}
 			change_lst.clear();
-			std::cout << "new events " << evt << " " << events_lst.size() << std::endl;
+			std::cout << "new events " << evt << "/" << events_lst.size() << std::endl;
 			while (evt--)
 			{
 				if (events_lst[evt].flags & EV_ERROR)
@@ -272,7 +274,7 @@ class Server {
 				}
 				if (events_lst[evt].ident == (uintptr_t)sock)
 				{
-					//for in clienttoaccept
+					//for in client_to_accept
 					new_sock = accept(events_lst[evt].ident, NULL, NULL);
 					if (new_sock == -1)
 					{
@@ -286,7 +288,7 @@ class Server {
 					server->info("client accepted");
 					continue ;
 				}
-				if (events_lst[evt].filter & EVFILT_READ)
+				if (events_lst[evt].filter & EVFILT_READ && !server->ctx[events_lst[evt].ident].ended())
 				{
 					server->info("can read");
 					try {
@@ -295,21 +297,24 @@ class Server {
 					}
 					catch (std::exception &e)
 					{
-						errorpage(500, server->error, events_lst[evt].ident);
+						server->ctx[events_lst[evt].ident].response.setError(500, server->error);
 					}
-				}
-				if (events_lst[evt].filter & EVFILT_READ || events_lst[evt].flags & EV_EOF)
-				{
-					server->info("closing connection");
-					close(events_lst[evt].ident);
-					server->ctx.erase(events_lst[evt].ident);
-					events_lst.erase(events_lst.begin() + evt);
+					change_lst.resize(change_lst.size() + 1);
+					EV_SET(&*(change_lst.end() - 1), events_lst[evt].ident, EVFILT_WRITE, EV_ADD, 0, 0, 0);
 					continue ;
 				}
 				if (events_lst[evt].filter & EVFILT_WRITE)
 				{
 					server->info("can write");
-					//
+					server->ctx[events_lst[evt].ident].response.write(events_lst[evt].ident);
+				}
+				if (events_lst[evt].filter & EVFILT_WRITE || events_lst[evt].flags & EV_EOF)
+				{
+					server->info("closing connection");
+					//change list delete with (EV_SET) ?
+					close(events_lst[evt].ident);
+					server->ctx.erase(events_lst[evt].ident);
+					events_lst.erase(events_lst.begin() + evt);
 					continue ;
 				}
 				server->info("nothing ?");

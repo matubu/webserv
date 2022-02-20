@@ -1,7 +1,6 @@
 #pragma once
 
-#include <string>
-#include <map>
+#include "utils.hpp"
 
 class HttpCode {
 	public:
@@ -49,9 +48,16 @@ class HttpCode {
 		code[504] = "Gateway Time-out";
 		code[505] = "HTTP Version not supported";
 	}
-	std::string getError(int err)
+	std::string getError(int err) const
 	{
-		return (code[err]);
+		return (code.find(err)->second);
 	}
 	~HttpCode() {}
 };
+
+const HttpCode httpCode;
+
+std::string httpCodeToString(int code)
+{
+	return (atos(code) + " " + httpCode.getError(code));
+}

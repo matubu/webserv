@@ -24,7 +24,6 @@
 #include <math.h>
 #include <sys/event.h>
 #include "mime.hpp"
-#include "HttpCode.hpp"
 
 #ifdef __APPLE__
 # include <sys/socket.h>
@@ -212,28 +211,6 @@ std::string	readable_fsize(size_t size)
 	return (ss.str());
 }
 
-std::string headers(const std::string &code, size_t len, const std::string &type)
-{
-	return ("HTTP/1.1 " + code + "\r\nContent-length: " + atos(len) + "\r\nContent-Type: " + type + "\r\n\r\n");
-}
-
-void sendf(int new_sock, const std::string &path, struct stat &stats)
-{
-	std::string header = headers("200 OK", stats.st_size, mime(path));
-	send(new_sock, header.c_str(), header.size(), 0);
-	int fd = open(path.c_str(), O_RDONLY);
-	#ifdef __APPLE__
-		struct sf_hdtr	hdtr = { NULL, 0, NULL, 0 };
-		off_t len = 0;
-		sendfile(fd, new_sock, 0, &len, &hdtr, 0);
-	#else
-		long int off = 0;
-		while (sendfile(new_sock, fd, &off, SENDFILE_BUF))
-			;
-	#endif
-	close(fd);
-}
-
 /* case insensitive string comparison functor */
 struct casecomp
 {
@@ -242,13 +219,6 @@ struct casecomp
 		return strcasecmp(a.c_str(), b.c_str()) < 0;
 	}
 };
-
-void	redirect(int fd, int code, const std::string &url)
-{
-	std::string	s = "HTTP/1.1 " + atos(code) + "\r\n";
-	s += "Location: " + url + "\r\n\r\n";
-	send(fd, s.c_str(), s.size(), 0);
-}
 
 std::string	cwd()
 {
@@ -264,26 +234,6 @@ bool contains(const std::vector<T> &v, const T &elem)
 	if (std::find(v.begin(), v.end(), elem) != v.end())
 		return true;
 	return false;
-}
-
-const	std::string g_ferrorpage = ftos(DEFAULT_ERROR_FILE);
-
-void errorpage(int code, const std::map<int, std::string> &error, int sock)
-{
-	struct stat	stats;
-	const std::map<int, std::string>::const_iterator	it = error.find(code);
-	HttpCode HttpCode;
-
-	if (it != error.end() && exist(it->second, &stats))
-	{
-		sendf(sock, it->second, stats);
-		return ;
-	}
-	std::string	file = replaceAll(replaceAll(g_ferrorpage,
-				"$NAME", HttpCode.getError(code)),
-				"$CODE", atos(code));
-	file = headers(atos(code), file.size(), "text/html") + file;
-	send(sock, file.c_str(), file.size(), 0);
 }
 
 bool	isip(const std::string &host)

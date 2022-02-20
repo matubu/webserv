@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utils.hpp"
+#include "Response.hpp"
 
 class Request {
 	private:
@@ -13,6 +14,7 @@ class Request {
 		std::string boundary;
 		bool		ended;
 		bool		chunked;
+
 		void init(const std::string &data, const std::map<std::string, std::string, casecomp> &headers)
 		{
 			std::map<std::string, std::string>::const_iterator it;
@@ -115,6 +117,7 @@ class Request {
 	std::string	url;
 	std::string	query;
 	std::string	protocol;
+	Response	response;
 
 	std::map<std::string, std::string, casecomp> headers;
 	Content		content;
@@ -153,8 +156,8 @@ class Request {
 		else
 			content.appendRaw(raw);
 		if (content.raw.size() > static_cast<size_t>(((headers.count("Content-Length")) 
-									? atoi(headers["Content-Length"].c_str()) : 0)))
-										throw 413;
+			? atoi(headers["Content-Length"].c_str()) : 0)))
+				throw 413;
 	}
 
 

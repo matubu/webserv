@@ -42,9 +42,8 @@ class gci_env
 };
 
 void handleCgi(
-	int fd,
 	const std::map<int, std::string> &error,
-	const Request &req,
+	Request &req,
 	const std::string &uri,
 	const std::string &cgi,
 	const std::string &path_info
@@ -95,7 +94,7 @@ void handleCgi(
 		write(s_cfd[1], req.content.raw.c_str(), req.content.raw.length());
 		close(s_cfd[1]);
 
-		std::string line = "HTTP/1.1 200 OK\r\n";
+		std::string line;
 		int n;
 		while ((n = read(c_sfd[0], buf, 1024)) != 0)
 		{
@@ -103,13 +102,13 @@ void handleCgi(
 			std::string tmp = buf;
 			if (tmp == "ERROR")
 			{
-				errorpage(500, error, fd);
+				req.response.setError(500, error);
 				close(c_sfd[0]);
 				return ;
 			}
 			line += std::string(buf);
 		}
-		send(fd, line.c_str(), line.size(), 0);
+		req.response.setBody("HTTP/1.1 200 OK\r\n\r\n", line);
 		close(c_sfd[0]);
 		waitpid(pid, NULL, 0);
 		//waitpid(pid, NULL, WNOWAIT);
