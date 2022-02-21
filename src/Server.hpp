@@ -5,6 +5,7 @@
 #include "utils.hpp"
 #include "cgi.hpp"
 #include "Response.hpp"
+#include "Url.hpp"
 
 class Server {
 	public:
@@ -109,12 +110,16 @@ class Server {
 		if (route.root.empty())
 			return (false);
 		std::string uri = route.root + path;
+
+		uri = (uri[uri.size() - 1] == '/') ? uri.substr(0, uri.size() - 1) : uri;
+
+		std::cout << "URI : " << uri << std::endl;
+
 		struct stat	stats;
 		if (exist(uri + "/" + route.index, &stats))
 			uri += "/" + route.index;
 		else if (!exist(uri, &stats))
 			return (false);
-
 
 		if (req->type == "DELETE")
 		{
@@ -150,52 +155,10 @@ class Server {
 	void handle_client(Request *req)
 	{
 		std::cout << "handle client" << std::endl;
-		if (req->url.find("..") != std::string::npos)
-			return (req->response.setError(400, error));
-		/*** FINDING ROUTE ***/
-		std::string url = req->url;
-		std::string	path;
-
-		url = replaceAll(url, "+", " ");
-		while (1)
-		{
-			if (routes.count(url))
-				break ;
-			if (url == "/") return (req->response.setError(404, error));
-			size_t idx = url.find_last_of('/', url.size() - 2);
-			path = url.substr(idx + 1, url.size() - idx - 1) + path;
-			url = url.substr(0, idx + 1);
-		}
 		
-		std::vector<std::string> u = split(path, "/");
-		if (u.size() == 0)
-		{
-			tryroot(req, routes[url], popchar(path));
-			return ;
-		}
-		struct stat buff;
-		std::string file;
-		file = routes[url].root + *u.begin();
-		std::string path_info;
-		for (std::vector<std::string>::iterator it = u.begin() + 1; it != u.end(); it++)
-		{
+		Url url(req->url, routes);
 
-			if (stat(file.c_str(), &buff) != -1 && S_ISREG(buff.st_mode) != 0)
-			{
-				for (std::vector<std::string>::iterator it2 = it; it2 != u.end(); it2++)
-					path_info += *it2 + "/";
-				
-				size_t	find = file.find(routes[url].root);
-				if (find != std::string::npos)
-					file.replace(find, routes[url].root.size(), "");
-
-				if (!tryroot(req, routes[url], file, path_info))
-					req->response.setError(404, error);
-				return ;
-			}
-			file += "/" + *it;
-		}
-		if (!tryroot(req, routes[url], popchar(path)))
+		if (!tryroot(req, routes[url.root], url.absolute, url.path_info))
 			req->response.setError(404, error);
 	}
 
