@@ -78,11 +78,10 @@ void handleCgi(
 		char *argv[] = { const_cast<char *>(cgi.c_str()),
 								const_cast<char *>(uri.c_str()), 0 };
 
-		if (execve(cgi.c_str(), argv, env.to_envp()) == -1)
-			write(1, "ERROR", 6);
+		execve(cgi.c_str(), argv, env.to_envp());
 		close(0);
 		close(1);
-		exit(0);
+		exit(1);
 	}
 	else
 	{
@@ -98,18 +97,15 @@ void handleCgi(
 		int n;
 		while ((n = read(c_sfd[0], buf, 1024)) != 0)
 		{
-			buf[n] = 0;
-			std::string tmp = buf;
-			if (tmp == "ERROR")
-			{
-				req.response.setError(500, error);
-				close(c_sfd[0]);
-				return ;
-			}
+			buf[n] = '\0';
 			line += std::string(buf);
 		}
-		req.response.setBody("HTTP/1.1 200 OK\r\n", line);
 		close(c_sfd[0]);
-		waitpid(pid, NULL, 0);
+		int	status;
+		waitpid(pid, &status, 0);
+		if (WEXITSTATUS(status))
+			req.response.setError(500, error);
+		else
+			req.response.setBody("HTTP/1.1 200 OK\r\n", line);
 	}
 }

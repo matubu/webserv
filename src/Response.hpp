@@ -119,10 +119,8 @@ class Response
 		std::cout << "header: " << header << std::endl;
 		std::cout << "readfd: " << readfd << std::endl;
 		std::cout << "body: " << body << std::endl;
-		send(fd, header.c_str(), header.size(), 0);
+		send(fd, (header + body).c_str(), (header + body).size(), 0);
 		if (readfd)
 			sendfd(fd, readfd);
-		else
-			send(fd, body.c_str(), body.size(), 0);
 	}
 };
