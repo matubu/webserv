@@ -125,8 +125,6 @@ class Request {
 
 	void init(const std::string &data, const std::set<std::string> &name)
 	{
-		empty = false;
-
 		std::stringstream	ss(data);
 		std::getline(ss, request);
 		std::vector<std::string>	req = split(request);
@@ -142,6 +140,8 @@ class Request {
 
 		if (ss.tellg() != -1)
 			content.init(data.substr(ss.tellg()), headers);
+
+		empty = false;
 	}
 
 	Request(const std::string &data, const std::set<std::string> &name)
@@ -162,7 +162,7 @@ class Request {
 
 
 
-	bool ended() const { return content.ended; }
+	bool ended() const { return (!empty && content.ended); }
 	
 	Request() : empty(true) {}
 	~Request() {}
@@ -171,11 +171,15 @@ class Request {
 
 std::ostream &operator<<(std::ostream &os, const Request &req)
 {
+	std::string request_method = std::string(req.request);
+	os << "METHOD" << trim(request_method, "\r") << std::endl;
 	os << "HEADERS [" << std::endl;
 	for (std::map<std::string, std::string, casecomp>::const_iterator it = req.headers.begin(); it != req.headers.end(); ++it)
 		os << "KEY: (" << it->first <<  ") VALUE: (" << it->second << ")" << std::endl;
 	os << "]" << std::endl;
 	os << "RECEIVED CONTENT LENGTH: (" << req.content.raw.length() << ")" << std::endl;
 	os << "RAW CONTENT: (" << req.content.raw << ")" << std::endl;
+	os << "ended: (" << req.ended() << ")" << std::endl;
+	os << "empty: (" << req.empty << ")" << std::endl;
 	return os;
 }
