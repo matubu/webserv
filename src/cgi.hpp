@@ -108,9 +108,8 @@ void handleCgi(
 			}
 			line += std::string(buf);
 		}
-		req.response.setBody("HTTP/1.1 200 OK\r\n\r\n", line);
+		req.response.setBody("HTTP/1.1 200 OK\r\n", line);
 		close(c_sfd[0]);
 		waitpid(pid, NULL, 0);
-		//waitpid(pid, NULL, WNOWAIT);
 	}
 }

@@ -40,20 +40,23 @@ class Response
 	std::string	header;
 	std::string	body;
 	int			readfd;
+	bool		fullfilled;
 
-	Response() : readfd(0) {}
+	Response() : readfd(0), fullfilled(false) {}
 	~Response() {}
 	void	setBody(const std::string &_header, const std::string &_body)
 	{
 		std::cout << "setbody " << _header << _body << std::endl;
 		header = _header;
 		body = _body;
+		fullfilled = true;
 	}
 	void	setFd(const std::string &_header, int fd)
 	{
 		std::cout << "setbody " << _header << std::endl << fd << std::endl;
 		header = _header;
 		readfd = fd;
+		fullfilled = true;
 	}
 	void	setError(int code, const std::map<int, std::string> &error)
 	{

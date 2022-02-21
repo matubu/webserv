@@ -274,21 +274,24 @@ class Server {
 				}
 				if (events_lst[evt].ident == (uintptr_t)sock)
 				{
-					//for in client_to_accept
-					new_sock = accept(events_lst[evt].ident, NULL, NULL);
-					if (new_sock == -1)
+					while (events_lst[evt].data--)
 					{
-						server->syserr("cannot accept client");
-						continue ;
+						new_sock = accept(events_lst[evt].ident, NULL, NULL);
+						if (new_sock == -1)
+						{
+							server->syserr("cannot accept client");
+							continue ;
+						}
+						fcntl(new_sock, F_SETFL, O_NONBLOCK);
+						change_lst.resize(change_lst.size() + 1);
+						events_lst.resize(events_lst.size() + 1);
+						EV_SET(&*(change_lst.end() - 1), new_sock, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
+						server->info("client accepted");
 					}
-					fcntl(new_sock, F_SETFL, O_NONBLOCK);
-					change_lst.resize(change_lst.size() + 1);
-					events_lst.resize(events_lst.size() + 1);
-					EV_SET(&*(change_lst.end() - 1), new_sock, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
-					server->info("client accepted");
+					//for in client_to_accept
 					continue ;
 				}
-				if (events_lst[evt].filter & EVFILT_READ && !server->ctx[events_lst[evt].ident].ended())
+				if (events_lst[evt].filter & EVFILT_READ && !server->ctx[events_lst[evt].ident].response.fullfilled)
 				{
 					server->info("can read");
 					try {
