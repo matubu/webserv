@@ -31,7 +31,6 @@ void sendfd(int new_sock, int fd)
 		while (sendfile(new_sock, fd, &off, SENDFILE_BUF))
 			;
 	#endif
-	close(fd);
 }
 
 class Response
@@ -41,8 +40,9 @@ class Response
 	std::string	body;
 	int			readfd;
 	bool		fullfilled;
+	bool		useread;
 
-	Response() : readfd(0), fullfilled(false) {}
+	Response() : readfd(0), fullfilled(false), useread(false) {}
 	~Response() {}
 	void	setBody(const std::string &_header, const std::string &_body)
 	{
@@ -51,12 +51,13 @@ class Response
 		body = _body;
 		fullfilled = true;
 	}
-	void	setFd(const std::string &_header, int fd)
+	void	setFd(const std::string &_header, int fd, int _useread = false)
 	{
 		std::cout << "setbody " << _header << std::endl << fd << std::endl;
 		header = _header;
 		readfd = fd;
 		fullfilled = true;
+		useread = _useread;
 	}
 	void	setError(int code, const std::map<int, std::string> &error)
 	{
@@ -113,14 +114,29 @@ class Response
 		setBody(headers(200, s.size(), "text/html"), s);
 	}
 
-	void	write(int fd)
+	bool	readFd()
+	{
+		char	buf[READFILE_BUF + 1];
+		int		ret = read(readfd, buf, READFILE_BUF);
+
+		if (ret == -1 || ret == 0)
+			return (false);
+		buf[ret] = '\0';
+		body += buf;
+		return (true);
+	}
+	void	writeSock(int fd)
 	{
 		std::cout << "sending on fd " << fd << std::endl;
 		std::cout << "header: " << header << std::endl;
 		std::cout << "readfd: " << readfd << std::endl;
 		std::cout << "body: " << body << std::endl;
 		send(fd, (header + body).c_str(), (header + body).size(), 0);
-		if (readfd)
+		if (readfd && !useread)
+		{
 			sendfd(fd, readfd);
+			close(readfd);
+			readfd = 0;
+		}
 	}
 };

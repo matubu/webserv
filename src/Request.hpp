@@ -117,6 +117,7 @@ class Request {
 	std::string	url;
 	std::string	query;
 	std::string	protocol;
+	int			sock;
 	Response	response;
 
 	std::map<std::string, std::string, casecomp> headers;
@@ -164,7 +165,7 @@ class Request {
 
 	bool ended() const { return (!empty && content.ended); }
 	
-	Request() : empty(true) {}
+	Request(int _sock) : sock(_sock), empty(true) {}
 	~Request() {}
 };
 

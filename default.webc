@@ -20,7 +20,8 @@ server
 	match /url
 	;
 	match /custom403
-		root $PWD/www
+		root $PWD/www/403.html
+//		root $PWD/www/
 	;
 	match /session
 		index index.php

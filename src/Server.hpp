@@ -16,7 +16,7 @@ class Server {
 	size_t							body_size;
 	std::map<std::string, Route>	routes;
 
-	std::map<int, Request>			ctx;
+	std::map<int, Request *>			ctx;
 
 	Server() : body_size(1024) {}
 	~Server() {}
@@ -60,31 +60,30 @@ class Server {
 		}
 	}
 
-	bool read_client(int fd)
+	bool read_client(Request *req)
 	{
 		char	buf[2049];
 
-		int	rc = recv(fd, buf, 2048, 0);
+		int	rc = recv(req->sock, buf, 2048, 0);
 		if (rc == -1)
 			return (false);
 		buf[rc] = '\0';
-		Request &req = ctx[fd];
 
 		try {
-			req.addContent(std::string(buf), name);
-			if (req.content.raw.size() > body_size)
+			req->addContent(std::string(buf), name);
+			if (req->content.raw.size() > body_size)
 			{
-				req.response.setError(413, error);
+				req->response.setError(413, error);
 				return (true);
 			}
 		}
 		catch (int e)
 		{
 			if (e)
-				req.response.setError(e, error);
+				req->response.setError(e, error);
 			return (true);
 		}
-		if (req.ended())
+		if (req->ended())
 		{
 			handle_client(req);
 			return (true);
@@ -92,18 +91,18 @@ class Server {
 		return (false);
 	}
 
-	bool	tryroot(Request &req, const Route &route, const std::string &path, std::string path_info = "")
+	bool	tryroot(Request *req, const Route &route, const std::string &path, std::string path_info = "")
 	{
 		std::cout << "try root" << std::endl;
-		if (!route.method.count(req.type))
+		if (!route.method.count(req->type))
 		{
-			req.response.setError(405, error);
+			req->response.setError(405, error);
 			return (true);
 		}
 		/*** REDIRECT ***/
 		if (route.redirect.first)
 		{
-			req.response.setRedirect(route.redirect.first, route.redirect.second + "/" + path);
+			req->response.setRedirect(route.redirect.first, route.redirect.second + "/" + path);
 			return (true);
 		}
 
@@ -117,13 +116,13 @@ class Server {
 			return (false);
 
 
-		if (req.type == "DELETE")
+		if (req->type == "DELETE")
 		{
 			std::string header;
 			if (remove(uri.c_str()) == 0)
-				req.response.setBody("HTTP/1.1 204 No Content\r\n\n", "");
+				req->response.setBody("HTTP/1.1 204 No Content\r\n\n", "");
 			else
-				req.response.setBody("HTTP/1.1 500 Internal Server Error\r\n\n", "");
+				req->response.setBody("HTTP/1.1 500 Internal Server Error\r\n\n", "");
 			return (true);
 		}
 
@@ -139,22 +138,22 @@ class Server {
 		if (stats.st_mode & S_IFDIR)
 		{
 			if (route.autoindex)
-				req.response.setAutoindex(error, req.url, uri);
+				req->response.setAutoindex(error, req->url, uri);
 			else
-				req.response.setError(403, error);
+				req->response.setError(403, error);
 			return (true);
 		}
-		req.response.setFd(headers(200, stats.st_size, mime(uri)), open(uri.c_str(), O_RDONLY));
+		req->response.setFd(headers(200, stats.st_size, mime(uri)), open(uri.c_str(), O_RDONLY));
 		return (true);
 	}
 
-	void handle_client(Request &req)
+	void handle_client(Request *req)
 	{
 		std::cout << "handle client" << std::endl;
-		if (req.url.find("..") != std::string::npos)
-			return (req.response.setError(400, error));
+		if (req->url.find("..") != std::string::npos)
+			return (req->response.setError(400, error));
 		/*** FINDING ROUTE ***/
-		std::string url = req.url;
+		std::string url = req->url;
 		std::string	path;
 
 		url = replaceAll(url, "+", " ");
@@ -162,7 +161,7 @@ class Server {
 		{
 			if (routes.count(url))
 				break ;
-			if (url == "/") return (req.response.setError(404, error));
+			if (url == "/") return (req->response.setError(404, error));
 			size_t idx = url.find_last_of('/', url.size() - 2);
 			path = url.substr(idx + 1, url.size() - idx - 1) + path;
 			url = url.substr(0, idx + 1);
@@ -191,13 +190,13 @@ class Server {
 					file.replace(find, routes[url].root.size(), "");
 
 				if (!tryroot(req, routes[url], file, path_info))
-					req.response.setError(404, error);
+					req->response.setError(404, error);
 				return ;
 			}
 			file += "/" + *it;
 		}
 		if (!tryroot(req, routes[url], popchar(path)))
-			req.response.setError(404, error);
+			req->response.setError(404, error);
 	}
 
 	void	initsocket(int *sock, int *kq)
@@ -253,9 +252,9 @@ class Server {
 
 		while (1)
 		{
-			int	evt;
+			int	i;
 			server->info("calling kevent");
-			if ((evt = kevent(kq,
+			if ((i = kevent(kq,
 					change_lst.data(), change_lst.size(), 
 					events_lst.data(), events_lst.size(),
 					NULL)) == -1)
@@ -264,60 +263,99 @@ class Server {
 				break ;
 			}
 			change_lst.clear();
-			std::cout << "new events " << evt << "/" << events_lst.size() << std::endl;
-			while (evt--)
+			std::cout << "new events " << i << "/" << events_lst.size() << std::endl;
+			while (i--)
 			{
-				if (events_lst[evt].flags & EV_ERROR)
+				#define evt events_lst[i]
+				if (evt.flags & EV_ERROR)
 				{
-					std::cout << "event error " << events_lst[evt].ident << " " << strerror(events_lst[evt].data) << std::endl;
+					std::cout << "event error " << evt.ident << " " << strerror(evt.data) << std::endl;
 					continue ;
 				}
-				if (events_lst[evt].ident == (uintptr_t)sock)
+				if (evt.ident == (uintptr_t)sock)
 				{
-					while (events_lst[evt].data--)
+					while (evt.data--)
 					{
-						new_sock = accept(events_lst[evt].ident, NULL, NULL);
+						new_sock = accept(evt.ident, NULL, NULL);
 						if (new_sock == -1)
 						{
 							server->syserr("cannot accept client");
 							continue ;
 						}
 						fcntl(new_sock, F_SETFL, O_NONBLOCK);
+
 						change_lst.resize(change_lst.size() + 1);
-						events_lst.resize(events_lst.size() + 1);
 						EV_SET(&*(change_lst.end() - 1), new_sock, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
+						events_lst.resize(events_lst.size() + 1);
+
+						server->ctx[new_sock] = new Request(new_sock);
 						server->info("client accepted");
 					}
-					//for in client_to_accept
 					continue ;
 				}
-				if (events_lst[evt].filter & EVFILT_READ && !server->ctx[events_lst[evt].ident].response.fullfilled)
+				if (evt.udata)
+				{
+					server->info("read pipe");
+					if (!((Request *)evt.udata)->response.readFd())
+					{
+						server->info("readfd ok");
+						change_lst.resize(change_lst.size() + 1);
+						EV_SET(&*(change_lst.end() - 1), ((Request *)evt.udata)->sock, EVFILT_WRITE, EV_ADD, 0, 0, 0);
+
+						close(((Request *)evt.udata)->response.readfd);
+						((Request *)evt.udata)->response.readfd = 0;
+						((Request *)evt.udata)->response.useread = 0;
+						events_lst.pop_back();
+					}
+					continue ;
+				}
+				if (evt.filter & EVFILT_READ && !server->ctx[evt.ident]->response.fullfilled)
 				{
 					server->info("can read");
 					try {
-						if (!server->read_client(events_lst[evt].ident))
+						if (!server->read_client(server->ctx[evt.ident]))
+						{
+							server->info("not finish");
 							continue ;
+						}
 					}
 					catch (std::exception &e)
 					{
-						server->ctx[events_lst[evt].ident].response.setError(500, server->error);
+						server->ctx[evt.ident]->response.setError(500, server->error);
 					}
-					change_lst.resize(change_lst.size() + 1);
-					EV_SET(&*(change_lst.end() - 1), events_lst[evt].ident, EVFILT_WRITE, EV_ADD, 0, 0, 0);
+					if (server->ctx[evt.ident]->response.useread)
+					{
+						change_lst.resize(change_lst.size() + 1);
+						EV_SET(&*(change_lst.end() - 1), server->ctx[evt.ident]->response.readfd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, server->ctx[evt.ident]);
+						events_lst.resize(events_lst.size() + 1);
+					}
+					else
+					{
+						change_lst.resize(change_lst.size() + 1);
+						EV_SET(&*(change_lst.end() - 1), evt.ident, EVFILT_WRITE, EV_ADD, 0, 0, 0);
+					}
 					continue ;
 				}
-				if (events_lst[evt].filter & EVFILT_WRITE)
+				if (evt.filter & EVFILT_WRITE)
 				{
 					server->info("can write");
-					server->ctx[events_lst[evt].ident].response.write(events_lst[evt].ident);
+					server->ctx[evt.ident]->response.writeSock(evt.ident);
 				}
-				if (events_lst[evt].filter & EVFILT_WRITE || events_lst[evt].flags & EV_EOF)
+				if (evt.filter & EVFILT_WRITE || evt.flags & EV_EOF)
 				{
 					server->info("closing connection");
-					//change list delete with (EV_SET) ?
-					close(events_lst[evt].ident);
-					server->ctx.erase(events_lst[evt].ident);
-					events_lst.erase(events_lst.begin() + evt);
+					if (server->ctx[evt.ident]->response.readfd)
+						close(server->ctx[evt.ident]->response.readfd);
+					close(evt.ident);
+
+					bool useread = server->ctx[evt.ident]->response.useread;
+
+					delete server->ctx[evt.ident];
+					server->ctx.erase(evt.ident);
+
+					if (useread)
+						events_lst.pop_back();
+					events_lst.pop_back();
 					continue ;
 				}
 				server->info("nothing ?");
