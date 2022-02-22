@@ -136,7 +136,6 @@ class Response
 			waitpid(pid, &status, 0);
 			if (WEXITSTATUS(status))
 				setError(500, _error);
-			return ;
 		}
 		if (ret == -1 || ret == 0)
 			return (false);
