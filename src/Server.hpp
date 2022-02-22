@@ -74,14 +74,14 @@ class Server {
 			req.addContent(std::string(buf), name);
 			if (req.content.raw.size() > body_size)
 			{
-				req.response.setError(413, error);
+				req.response.setError(413, &error);
 				return (true);
 			}
 		}
 		catch (int e)
 		{
 			if (e)
-				req.response.setError(e, error);
+				req.response.setError(e, &error);
 			return (true);
 		}
 		if (req.ended())
@@ -94,10 +94,9 @@ class Server {
 
 	bool	tryroot(Request &req, const Route &route, const std::string &path, std::string path_info = "")
 	{
-		std::cout << "try root" << std::endl;
 		if (!route.method.count(req.type))
 		{
-			req.response.setError(405, error);
+			req.response.setError(405, &error);
 			return (true);
 		}
 		/*** REDIRECT ***/
@@ -112,8 +111,6 @@ class Server {
 		std::string uri = route.root + path;
 
 		uri = (uri[uri.size() - 1] == '/') ? uri.substr(0, uri.size() - 1) : uri;
-
-		std::cout << "URI : " << uri << std::endl;
 
 		struct stat	stats;
 		if (exist(uri + "/" + route.index, &stats))
@@ -145,7 +142,7 @@ class Server {
 			if (route.autoindex)
 				req.response.setAutoindex(error, req.url, uri);
 			else
-				req.response.setError(403, error);
+				req.response.setError(403, &error);
 			return (true);
 		}
 		req.response.setFd(headers(200, stats.st_size, mime(uri)), open(uri.c_str(), O_RDONLY));
@@ -154,12 +151,10 @@ class Server {
 
 	void handle_client(Request &req)
 	{
-		std::cout << "handle client" << std::endl;
-		
 		URL url(req.url, routes);
 
 		if (!tryroot(req, routes[url.root], url.absolute, url.path_info))
-			req.response.setError(404, error);
+			req.response.setError(404, &error);
 	}
 
 	void	initsocket(int *sock, int *kq)
@@ -224,14 +219,12 @@ class Server {
 				break ;
 			}
 			change_lst.clear();
-			std::cout << "new events " << len << std::endl;
 			for (int i = 0; i < len; ++i)
 			{
-				#define evt events_lst[i]
-				std::cout << "-> write " << (evt.filter & EVFILT_WRITE) << " eof " << (evt.flags & EV_EOF) << " on " << evt.ident << std::endl;
+				struct kevent &evt = events_lst[i];
 				if (evt.flags & EV_ERROR)
 				{
-					std::cout << "event error " << evt.ident << " " << strerror(evt.data) << std::endl;
+					server->info("error on fd " + atos(evt.ident) + " " + strerror(evt.data));
 					continue ;
 				}
 				if (evt.ident == (uintptr_t)sock)
@@ -246,8 +239,9 @@ class Server {
 						}
 						fcntl(new_sock, F_SETFL, O_NONBLOCK);
 
-						change_lst.resize(change_lst.size() + 1);
-						EV_SET(&*(change_lst.end() - 1), new_sock, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
+						change_lst.resize(change_lst.size() + 2);
+						EV_SET(&*(change_lst.end() - 2), new_sock, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
+						EV_SET(&*(change_lst.end() - 1), new_sock, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, 6000, 0);
 
 						server->ctx[new_sock].setSock(new_sock);
 						server->info("client accepted");
@@ -262,7 +256,6 @@ class Server {
 						server->info("readfd ok");
 						change_lst.resize(change_lst.size() + 1);
 						EV_SET(&*(change_lst.end() - 1), server->ctx[(uintptr_t)evt.udata].sock, EVFILT_WRITE, EV_ADD, 0, 0, 0);
-						std::cout << "add write on " << server->ctx[(uintptr_t)evt.udata].sock << std::endl;
 
 						close(server->ctx[(uintptr_t)evt.udata].response.readfd);
 						server->ctx[(uintptr_t)evt.udata].response.readfd = 0;
@@ -271,6 +264,15 @@ class Server {
 					continue ;
 				}
 				if (!server->ctx.count(evt.ident)) continue ;
+				if (evt.flags & EV_CLEAR)
+				{
+					server->info("timeout");
+
+					server->ctx[evt.ident].response.setError(408, NULL);
+					change_lst.resize(change_lst.size() + 1);
+					EV_SET(&*(change_lst.end() - 1), evt.ident, EVFILT_WRITE, EV_ADD, 0, 0, 0);
+					continue ;
+				}
 				if (evt.filter & EVFILT_READ && !server->ctx[evt.ident].response.fullfilled)
 				{
 					server->info("can read");
@@ -283,7 +285,7 @@ class Server {
 					}
 					catch (std::exception &e)
 					{
-						server->ctx[evt.ident].response.setError(500, server->error);
+						server->ctx[evt.ident].response.setError(500, &server->error);
 					}
 					if (server->ctx[evt.ident].response.useread)
 					{
@@ -293,7 +295,6 @@ class Server {
 					else
 					{
 						change_lst.resize(change_lst.size() + 1);
-						std::cout << "add write on " << evt.ident << std::endl;
 						EV_SET(&*(change_lst.end() - 1), evt.ident, EVFILT_WRITE, EV_ADD, 0, 0, 0);
 					}
 					continue ;
@@ -307,18 +308,13 @@ class Server {
 				{
 					server->info("closing connection");
 					if (server->ctx[evt.ident].response.readfd)
-					{
-						std::cout << "close(" << server->ctx[evt.ident].response.readfd << ")" << ENDL;
 						close(server->ctx[evt.ident].response.readfd);
-					}
-					std::cout << "close(" << evt.ident << ")" << ENDL;
 					close(evt.ident);
 
 					server->ctx.erase(evt.ident);
 
 					continue ;
 				}
-				server->info("nothing ?");
 			}
 		}
 		return (NULL);

@@ -93,7 +93,7 @@ void handleCgi(
 		int	status;
 		waitpid(pid, &status, 0);//TODO nowait
 		if (WEXITSTATUS(status))
-			req.response.setError(500, error);
+			req.response.setError(500, &error);
 		else
 		{
 			fcntl(response_fd[0], F_SETFL, O_NONBLOCK);

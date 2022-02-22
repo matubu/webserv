@@ -44,8 +44,6 @@ class URL
 			}
 			else
 				absolute = original_url;
-			std::cout << "final path : " << absolute << std::endl;
-			std::cout << "path_info : " << path_info << std::endl;
 		};
 		~URL() {};
 	private:
@@ -57,7 +55,6 @@ class URL
 			while (i >= 0)
 			{
 				std::string tmp = tryRoot(split_url, i);
-				std::cout << "find root : " << tmp << std::endl;
 				if (routes.count((tmp == "/") ? tmp : tmp + "/"))
 					return ((tmp == "/") ? tmp : tmp + "/");
 				i--;

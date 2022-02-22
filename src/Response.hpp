@@ -46,28 +46,29 @@ class Response
 	~Response() {}
 	void	setBody(const std::string &_header, const std::string &_body)
 	{
-		std::cout << "setbody " << _header << _body << std::endl;
 		header = _header;
 		body = _body;
 		fullfilled = true;
 	}
 	void	setFd(const std::string &_header, int fd, int _useread = false)
 	{
-		std::cout << "setbody " << _header << std::endl << fd << std::endl;
 		header = _header;
 		readfd = fd;
 		fullfilled = true;
 		useread = _useread;
 	}
-	void	setError(int code, const std::map<int, std::string> &error)
+	void	setError(int code, const std::map<int, std::string> *error)
 	{
-		struct stat	stats;
-		const std::map<int, std::string>::const_iterator	it = error.find(code);
-
-		if (it != error.end() && exist(it->second, &stats))
+		if (error)
 		{
-			setFd(headers(200, stats.st_size, mime(it->second)), open(it->second.c_str(), O_RDONLY));
-			return ;
+			struct stat	stats;
+			const std::map<int, std::string>::const_iterator	it = error->find(code);
+
+			if (it != error->end() && exist(it->second, &stats))
+			{
+				setFd(headers(200, stats.st_size, mime(it->second)), open(it->second.c_str(), O_RDONLY));
+				return ;
+			}
 		}
 		std::string	file = replaceAll(replaceAll(g_ferrorpage,
 					"$NAME", httpCodeToString(code)),
@@ -90,7 +91,7 @@ class Response
 		std::string		s = g_fautoindex_before;
 
 		if ((dir = opendir(path.c_str())) == NULL)
-			setError(403, error);
+			setError(403, &error);
 		while ((diread = readdir(dir)))
 		{
 			if (!strcmp(diread->d_name, ".")
@@ -127,10 +128,6 @@ class Response
 	}
 	void	writeSock(int fd)
 	{
-		std::cout << "sending on fd " << fd << std::endl;
-		std::cout << "header: " << header << std::endl;
-		std::cout << "readfd: " << readfd << std::endl;
-		std::cout << "body: " << body << std::endl;
 		send(fd, (header + body).c_str(), (header + body).size(), 0);
 		if (readfd && !useread)
 		{
