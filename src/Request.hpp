@@ -134,7 +134,9 @@ class Request {
 		url = urlsanitize(req[1]);
 		query = getQuery(req[1]);
 		protocol = trim(req[2], "\r");
-		if (!isIn(type, 3, "GET", "POST", "DELETE") || protocol != "HTTP/1.1")
+		if (protocol != "HTTP/1.1")
+			throw 505;
+		if (!isIn(type, 3, "GET", "POST", "DELETE"))
 			throw 400;
 
 		setHeaders(ss, name);
