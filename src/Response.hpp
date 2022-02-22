@@ -41,6 +41,8 @@ class Response
 	int			readfd;
 	bool		fullfilled;
 	bool		useread;
+	int			pid;
+	const std::map<int, std::string> *_error;
 
 	Response() : readfd(0), fullfilled(false), useread(false) {}
 	~Response() {}
@@ -50,12 +52,14 @@ class Response
 		body = _body;
 		fullfilled = true;
 	}
-	void	setFd(const std::string &_header, int fd, int _useread = false)
+	void	setFd(const std::string &_header, int fd, const std::map<int, std::string> *error = NULL, int _pid = 0, int _useread = false)
 	{
 		header = _header;
 		readfd = fd;
 		fullfilled = true;
+		pid = _pid;
 		useread = _useread;
+		_error = error;
 	}
 	void	setError(int code, const std::map<int, std::string> *error)
 	{
@@ -120,6 +124,14 @@ class Response
 		char	buf[READFILE_BUF + 1];
 		int		ret = read(readfd, buf, READFILE_BUF);
 
+		if (ret == 0)
+		{
+			int	status;
+
+			waitpid(pid, &status, 0);
+			if (WEXITSTATUS(status))
+				setError(500, _error);
+		}
 		if (ret == -1 || ret == 0)
 			return (false);
 		buf[ret] = '\0';

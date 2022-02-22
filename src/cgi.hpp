@@ -90,14 +90,15 @@ void handleCgi(
 	{
 		close(response_fd[1]);
 
-		int	status;
-		waitpid(pid, &status, 0);
-		if (WEXITSTATUS(status))
-			req.response.setError(500, &error);
-		else
-		{
+		// int	status;
+		// waitpid(pid, &status, WNOHANG);
+		// waitpid(pid, &status, 0);
+		// if (WEXITSTATUS(status))
+		// 	req.response.setError(500, &error);
+		// else
+		// {
 			fcntl(response_fd[0], F_SETFL, O_NONBLOCK);
-			req.response.setFd("HTTP/1.1 200 OK\r\n", response_fd[0], true);
-		}
+			req.response.setFd("HTTP/1.1 200 OK\r\n", response_fd[0], &error, pid, true);
+		// }
 	}
 }
