@@ -131,7 +131,7 @@ class Request {
 		std::vector<std::string>	req = split(request);
 		if (req.size() != 3) throw 400;
 		type = req[0];
-		url = urlsanitizer(req[1]);
+		url = urlsanitize(req[1]);
 		query = getQuery(req[1]);
 		protocol = trim(req[2], "\r");
 		if (!isIn(type, 3, "GET", "POST", "DELETE") || protocol != "HTTP/1.1")
@@ -145,10 +145,15 @@ class Request {
 		empty = false;
 	}
 
-	Request(const std::string &data, const std::set<std::string> &name)
+	void	setSock(int _sock)
 	{
-		init(data, name);
+		sock = _sock;
 	}
+
+	//Request(const std::string &data, const std::set<std::string> &name)
+	//{
+	//	init(data, name);
+	//}
 
 	void addContent(const std::string &raw, const std::set<std::string> &name)
 	{
@@ -165,7 +170,7 @@ class Request {
 
 	bool ended() const { return (!empty && content.ended); }
 	
-	Request(int _sock) : sock(_sock), empty(true) {}
+	Request() : empty(true) {}
 	~Request() {}
 };
 

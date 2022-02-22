@@ -43,7 +43,7 @@ class gci_env
 
 void handleCgi(
 	const std::map<int, std::string> &error,
-	Request *req,
+	Request &req,
 	const std::string &uri,
 	const std::string &cgi,
 	const std::string &path_info
@@ -58,19 +58,19 @@ void handleCgi(
 	{
 		pipe(request_fd);
 
-		write(request_fd[1], req->content.raw.c_str(), req->content.raw.length());
+		write(request_fd[1], req.content.raw.c_str(), req.content.raw.length());
 
 		close(request_fd[1]);
 		close(response_fd[0]);
 
 		gci_env env;
-		for (std::map<std::string, std::string, casecomp>::const_iterator it = req->headers.begin(); it != req->headers.end(); ++it)
+		for (std::map<std::string, std::string, casecomp>::const_iterator it = req.headers.begin(); it != req.headers.end(); ++it)
 			env.add_env(it->first, it->second);
 
-		env.add_env("REQUEST_METHOD", req->type);
+		env.add_env("REQUEST_METHOD", req.type);
 		env.add_env("PATH_TRANSLATED", uri);
-		env.add_env("SCRIPT_NAME", req->url);
-		env.add_env("QUERY_STRING", req->query);
+		env.add_env("SCRIPT_NAME", req.url);
+		env.add_env("QUERY_STRING", req.query);
 		env.add_env("PATH_INFO", path_info);
 
 		dup2(request_fd[0], 0);
@@ -93,11 +93,11 @@ void handleCgi(
 		int	status;
 		waitpid(pid, &status, 0);//TODO nowait
 		if (WEXITSTATUS(status))
-			req->response.setError(500, error);
+			req.response.setError(500, error);
 		else
 		{
 			fcntl(response_fd[0], F_SETFL, O_NONBLOCK);
-			req->response.setFd("HTTP/1.1 200 OK\r\n", response_fd[0], true);
+			req.response.setFd("HTTP/1.1 200 OK\r\n", response_fd[0], true);
 		}
 	}
 }

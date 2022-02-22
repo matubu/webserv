@@ -7,14 +7,14 @@
 #include <vector>
 #include "Route.hpp"
 
-class Url
+class URL
 {
 	public:
 		std::string path_info;
 		std::string root;
 		std::string absolute;
 	public:
-		Url(std::string original_url, std::map<std::string, Route> &routes)
+		URL(std::string original_url, std::map<std::string, Route> &routes)
 		{
 			replaceAll(original_url, "+", " ");
 			root = getRoot(original_url, routes);
@@ -47,7 +47,7 @@ class Url
 			std::cout << "final path : " << absolute << std::endl;
 			std::cout << "path_info : " << path_info << std::endl;
 		};
-		~Url() {};
+		~URL() {};
 	private:
 		std::string getRoot(std::string _url, std::map<std::string, Route> &routes)
 		{

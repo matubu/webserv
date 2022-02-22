@@ -17,8 +17,6 @@ server
 	match /hello
 		redirect 307 https://google.com
 	;
-	match /url
-	;
 	match /custom403
 		root $PWD/www/403.html
 //		root $PWD/www/

@@ -5,7 +5,7 @@
 #include "utils.hpp"
 #include "cgi.hpp"
 #include "Response.hpp"
-#include "Url.hpp"
+#include "URL.hpp"
 
 class Server {
 	public:
@@ -17,7 +17,7 @@ class Server {
 	size_t							body_size;
 	std::map<std::string, Route>	routes;
 
-	std::map<int, Request *>			ctx;
+	std::map<int, Request>			ctx;
 
 	Server() : body_size(1024) {}
 	~Server() {}
@@ -61,30 +61,30 @@ class Server {
 		}
 	}
 
-	bool read_client(Request *req)
+	bool read_client(Request &req)
 	{
 		char	buf[2049];
 
-		int	rc = recv(req->sock, buf, 2048, 0);
+		int	rc = recv(req.sock, buf, 2048, 0);
 		if (rc == -1)
 			return (false);
 		buf[rc] = '\0';
 
 		try {
-			req->addContent(std::string(buf), name);
-			if (req->content.raw.size() > body_size)
+			req.addContent(std::string(buf), name);
+			if (req.content.raw.size() > body_size)
 			{
-				req->response.setError(413, error);
+				req.response.setError(413, error);
 				return (true);
 			}
 		}
 		catch (int e)
 		{
 			if (e)
-				req->response.setError(e, error);
+				req.response.setError(e, error);
 			return (true);
 		}
-		if (req->ended())
+		if (req.ended())
 		{
 			handle_client(req);
 			return (true);
@@ -92,18 +92,18 @@ class Server {
 		return (false);
 	}
 
-	bool	tryroot(Request *req, const Route &route, const std::string &path, std::string path_info = "")
+	bool	tryroot(Request &req, const Route &route, const std::string &path, std::string path_info = "")
 	{
 		std::cout << "try root" << std::endl;
-		if (!route.method.count(req->type))
+		if (!route.method.count(req.type))
 		{
-			req->response.setError(405, error);
+			req.response.setError(405, error);
 			return (true);
 		}
 		/*** REDIRECT ***/
 		if (route.redirect.first)
 		{
-			req->response.setRedirect(route.redirect.first, route.redirect.second + "/" + path);
+			req.response.setRedirect(route.redirect.first, route.redirect.second + "/" + path);
 			return (true);
 		}
 
@@ -121,13 +121,13 @@ class Server {
 		else if (!exist(uri, &stats))
 			return (false);
 
-		if (req->type == "DELETE")
+		if (req.type == "DELETE")
 		{
 			std::string header;
 			if (remove(uri.c_str()) == 0)
-				req->response.setBody("HTTP/1.1 204 No Content\r\n\n", "");
+				req.response.setBody("HTTP/1.1 204 No Content\r\n\n", "");
 			else
-				req->response.setBody("HTTP/1.1 500 Internal Server Error\r\n\n", "");
+				req.response.setBody("HTTP/1.1 500 Internal Server Error\r\n\n", "");
 			return (true);
 		}
 
@@ -143,23 +143,23 @@ class Server {
 		if (stats.st_mode & S_IFDIR)
 		{
 			if (route.autoindex)
-				req->response.setAutoindex(error, req->url, uri);
+				req.response.setAutoindex(error, req.url, uri);
 			else
-				req->response.setError(403, error);
+				req.response.setError(403, error);
 			return (true);
 		}
-		req->response.setFd(headers(200, stats.st_size, mime(uri)), open(uri.c_str(), O_RDONLY));
+		req.response.setFd(headers(200, stats.st_size, mime(uri)), open(uri.c_str(), O_RDONLY));
 		return (true);
 	}
 
-	void handle_client(Request *req)
+	void handle_client(Request &req)
 	{
 		std::cout << "handle client" << std::endl;
 		
-		Url url(req->url, routes);
+		URL url(req.url, routes);
 
 		if (!tryroot(req, routes[url.root], url.absolute, url.path_info))
-			req->response.setError(404, error);
+			req.response.setError(404, error);
 	}
 
 	void	initsocket(int *sock, int *kq)
@@ -195,9 +195,7 @@ class Server {
 
 		int							sock, new_sock, kq;
 		std::vector<struct kevent>	change_lst;
-		std::vector<struct kevent>	events_lst;
-
-		events_lst.resize(1);
+		struct kevent				events_lst[1024];
 
 		try { server->initsocket(&sock, &kq); }
 		catch (const char *e)
@@ -215,21 +213,22 @@ class Server {
 
 		while (1)
 		{
-			int	i;
+			int	len;
 			server->info("calling kevent");
-			if ((i = kevent(kq,
+			if ((len = kevent(kq,
 					change_lst.data(), change_lst.size(), 
-					events_lst.data(), events_lst.size(),
+					events_lst, 1024,
 					NULL)) == -1)
 			{
 				server->syserr("kevent failed");
 				break ;
 			}
 			change_lst.clear();
-			std::cout << "new events " << i << "/" << events_lst.size() << std::endl;
-			while (i--)
+			std::cout << "new events " << len << std::endl;
+			for (int i = 0; i < len; ++i)
 			{
 				#define evt events_lst[i]
+				std::cout << "-> write " << (evt.filter & EVFILT_WRITE) << " eof " << (evt.flags & EV_EOF) << " on " << evt.ident << std::endl;
 				if (evt.flags & EV_ERROR)
 				{
 					std::cout << "event error " << evt.ident << " " << strerror(evt.data) << std::endl;
@@ -249,9 +248,8 @@ class Server {
 
 						change_lst.resize(change_lst.size() + 1);
 						EV_SET(&*(change_lst.end() - 1), new_sock, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
-						events_lst.resize(events_lst.size() + 1);
 
-						server->ctx[new_sock] = new Request(new_sock);
+						server->ctx[new_sock].setSock(new_sock);
 						server->info("client accepted");
 					}
 					continue ;
@@ -259,20 +257,21 @@ class Server {
 				if (evt.udata)
 				{
 					server->info("read pipe");
-					if (!((Request *)evt.udata)->response.readFd())
+					if (server->ctx.count((uintptr_t)evt.udata) && !server->ctx[(uintptr_t)evt.udata].response.readFd())
 					{
 						server->info("readfd ok");
 						change_lst.resize(change_lst.size() + 1);
-						EV_SET(&*(change_lst.end() - 1), ((Request *)evt.udata)->sock, EVFILT_WRITE, EV_ADD, 0, 0, 0);
+						EV_SET(&*(change_lst.end() - 1), server->ctx[(uintptr_t)evt.udata].sock, EVFILT_WRITE, EV_ADD, 0, 0, 0);
+						std::cout << "add write on " << server->ctx[(uintptr_t)evt.udata].sock << std::endl;
 
-						close(((Request *)evt.udata)->response.readfd);
-						((Request *)evt.udata)->response.readfd = 0;
-						((Request *)evt.udata)->response.useread = 0;
-						events_lst.pop_back();
+						close(server->ctx[(uintptr_t)evt.udata].response.readfd);
+						server->ctx[(uintptr_t)evt.udata].response.readfd = 0;
+						server->ctx[(uintptr_t)evt.udata].response.useread = 0;
 					}
 					continue ;
 				}
-				if (evt.filter & EVFILT_READ && !server->ctx[evt.ident]->response.fullfilled)
+				if (!server->ctx.count(evt.ident)) continue ;
+				if (evt.filter & EVFILT_READ && !server->ctx[evt.ident].response.fullfilled)
 				{
 					server->info("can read");
 					try {
@@ -284,17 +283,17 @@ class Server {
 					}
 					catch (std::exception &e)
 					{
-						server->ctx[evt.ident]->response.setError(500, server->error);
+						server->ctx[evt.ident].response.setError(500, server->error);
 					}
-					if (server->ctx[evt.ident]->response.useread)
+					if (server->ctx[evt.ident].response.useread)
 					{
 						change_lst.resize(change_lst.size() + 1);
-						EV_SET(&*(change_lst.end() - 1), server->ctx[evt.ident]->response.readfd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, server->ctx[evt.ident]);
-						events_lst.resize(events_lst.size() + 1);
+						EV_SET(&*(change_lst.end() - 1), server->ctx[evt.ident].response.readfd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, (void *)(evt.ident));
 					}
 					else
 					{
 						change_lst.resize(change_lst.size() + 1);
+						std::cout << "add write on " << evt.ident << std::endl;
 						EV_SET(&*(change_lst.end() - 1), evt.ident, EVFILT_WRITE, EV_ADD, 0, 0, 0);
 					}
 					continue ;
@@ -302,23 +301,21 @@ class Server {
 				if (evt.filter & EVFILT_WRITE)
 				{
 					server->info("can write");
-					server->ctx[evt.ident]->response.writeSock(evt.ident);
+					server->ctx[evt.ident].response.writeSock(evt.ident);
 				}
 				if (evt.filter & EVFILT_WRITE || evt.flags & EV_EOF)
 				{
 					server->info("closing connection");
-					if (server->ctx[evt.ident]->response.readfd)
-						close(server->ctx[evt.ident]->response.readfd);
+					if (server->ctx[evt.ident].response.readfd)
+					{
+						std::cout << "close(" << server->ctx[evt.ident].response.readfd << ")" << ENDL;
+						close(server->ctx[evt.ident].response.readfd);
+					}
+					std::cout << "close(" << evt.ident << ")" << ENDL;
 					close(evt.ident);
 
-					bool useread = server->ctx[evt.ident]->response.useread;
-
-					delete server->ctx[evt.ident];
 					server->ctx.erase(evt.ident);
 
-					if (useread)
-						events_lst.pop_back();
-					events_lst.pop_back();
 					continue ;
 				}
 				server->info("nothing ?");

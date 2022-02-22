@@ -147,17 +147,6 @@ std::string	strtoupper(std::string str)
 	return (str);
 }
 
-std::string	urlsanitizer(std::string url)
-{
-	size_t end = url.find_first_of("#?");
-	if (end != std::string::npos) url = url.substr(0, end);
-	std::vector<std::string> lst = split(url, "/");
-	url = "/";
-	for (size_t i = 0; i < lst.size(); i++)
-		url += lst[i] + "/";
-	return (url);
-}
-
 std::string    getQuery(const std::string &url)
 {
     std::vector<std::string> tmp = split(url, "?");
@@ -239,4 +228,15 @@ bool contains(const std::vector<T> &v, const T &elem)
 bool	isip(const std::string &host)
 {
 	return (host.find_first_not_of("0123456789.") == std::string::npos);
+}
+
+std::string	urlsanitize(std::string url)
+{
+	size_t end = url.find_first_of("#?");
+	if (end != std::string::npos) url = url.substr(0, end);
+	std::vector<std::string> lst = split(url, "/");
+	url = "/";
+	for (size_t i = 0; i < lst.size(); i++)
+		url += lst[i] + "/";
+	return (url);
 }

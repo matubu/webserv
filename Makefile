@@ -49,4 +49,4 @@ siege_test_cgi:
 siege: siege_test_static
 
 .PHONY: all run clean fclean re \
-	siege_install siege_test_static siege_test_autoindex siege
+	siege_install siege_test_static siege_test_cgi siege

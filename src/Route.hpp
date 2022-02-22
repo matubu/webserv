@@ -22,7 +22,7 @@ class	Route {
 	{ index = _index; }
 
 	void	setRoot(const std::string &_root)
-	{ root = urlsanitizer(replaceAll(_root, "$PWD", cwd())); }
+	{ root = urlsanitize(replaceAll(_root, "$PWD", cwd())); }
 
 	void	setCgi(const std::string &_ext, const std::string &_path)
 	{ cgi[_ext] = _path.substr(_path.find_first_not_of('.')); }
