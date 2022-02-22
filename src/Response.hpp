@@ -49,8 +49,12 @@ class Response
 	void	setBody(const std::string &_header, const std::string &_body)
 	{
 		header = _header;
-		body = _body;
+		readfd = 0;
 		fullfilled = true;
+		pid = 0;
+		useread = false;
+		body = _body;
+
 	}
 	void	setFd(const std::string &_header, int fd, const std::map<int, std::string> *error = NULL, int _pid = 0, int _useread = false)
 	{
@@ -59,6 +63,7 @@ class Response
 		fullfilled = true;
 		pid = _pid;
 		useread = _useread;
+		body = "";
 		_error = error;
 	}
 	void	setError(int code, const std::map<int, std::string> *error)
@@ -131,6 +136,7 @@ class Response
 			waitpid(pid, &status, 0);
 			if (WEXITSTATUS(status))
 				setError(500, _error);
+			return ;
 		}
 		if (ret == -1 || ret == 0)
 			return (false);
