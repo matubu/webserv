@@ -91,7 +91,7 @@ void handleCgi(
 		close(response_fd[1]);
 
 		int	status;
-		waitpid(pid, &status, 0);//TODO nowait
+		waitpid(pid, &status, 0);
 		if (WEXITSTATUS(status))
 			req.response.setError(500, &error);
 		else
