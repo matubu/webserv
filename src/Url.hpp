@@ -16,6 +16,7 @@ class Url
 	public:
 		Url(std::string original_url, std::map<std::string, Route> &routes)
 		{
+			replaceAll(original_url, "+", " ");
 			root = getRoot(original_url, routes);
 			if (root == original_url)
 				return ;
