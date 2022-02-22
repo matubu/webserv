@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/style.css">
+	<link rel="stylesheet" href="https://unpkg.com/@speed-highlight/core/dist/themes/atom-dark.css">
+	<title>Webserv | CGI</title>
+</head>
+<body>
+	<header>
+		<h1>CGI</h1>
+		<a href="/" class="dim">Home</a>
+	</header>
+	<main>
+		<form method="post" enctype="multipart/form-data">
+			<input type="file" name="file" required>
+			<input type="submit" formaction="/cgi/upload.php" value="upload php" name="submit">
+			<input type="submit" formaction="/cgi/upload.py" value="upload python" name="submit">
+		</form>
+		<p>Example:</p>
+		<div class="shj-lang-http">DELETE /echo/delete/json HTTP/1.1
+Authorization: Bearer mt0dgHmLJMVQhvjpNXDyA83vA_PxH23Y
+Accept: application/json
+Content-Type: application/json
+Content-Length: 19
+Host: reqbin.com</div>
+	
+		<a class="link" href="/cgi/upload">
+			<div>
+				<span class="badge" style="--color:245,180,16">dir</span>
+				<span>Upload directory</span>
+			</div>
+		</a>
+		<a class="link" href="/cgi/index.html" download>
+			<div>
+				<span class="badge" style="--color:245,113,113">html</span>
+				<span>Download html file</span>
+			</div>
+		</a>
+		<a class="link" href="/cgi/info.php">
+			<div>
+				<span class="badge" style="--color:163,113,247">php</span>
+				<span>Php GET test</span>
+			</div>
+		</a>
+		<a class="link" href="/cgi/info.py">
+			<div>
+				<span class="badge" style="--color:100,127,255">python</span>
+				<span>Python GET test</span>
+			</div>
+		</a>
+		<a class="link" href="/cgi/index.html.zip">
+			<div>
+				<span class="badge" style="--color:163,247,107">zip</span>
+				<span>Download zip file</span>
+			</div>
+		</a>
+	</main>
+	<footer class="dim">
+		<nav>
+			<span>WebServ - 2022, made by </span>
+			<a href="https://github.com/matubu" target="_blank">mberger-</a>,
+			<a href="https://github.com/mathieupi" target="_blank">mmehran</a>,
+			<a href="https://github.com/louchebem06" target="_blank">bledda</a>
+		</nav>
+	</footer>
+	<script type="module">
+		import { highlightAll } from 'https://unpkg.com/@speed-highlight/core/dist/index.js'
+		highlightAll();
+	</script>
+</body>
+</html>

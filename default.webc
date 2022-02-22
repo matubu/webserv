@@ -1,0 +1,45 @@
+server
+	match /
+		autoindex true
+		index index.html
+		root $PWD/www
+		cgi .php /Users/bledda/.brew/bin/php-cgi
+		cgi .py /usr/local/bin/python3
+		method GET
+		method POST
+		method DELETE
+	;
+	match /delete
+		autoindex true
+		root $PWD/www
+		method DELETE
+	;
+	match /hello
+		redirect 307 https://google.com
+	;
+	match /custom403
+		root $PWD/www/403.html
+//		root $PWD/www/
+	;
+	match /session
+		index index.php
+		root $PWD/www/session
+		cgi .php /Users/bledda/.brew/bin/php-cgi
+	;
+	error 403 www/403.html
+	port 8080
+	host 0.0.0.0
+	name apple.com
+	name google.com
+	name google.com
+	name localhost
+	body_size 1024
+;
+
+server
+	port 7000
+	match /
+		autoindex true
+		root $PWD
+	;
+;
