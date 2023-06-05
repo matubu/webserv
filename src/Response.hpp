@@ -49,7 +49,10 @@ class Response
 	void	setBody(const std::string &_header, const std::string &_body)
 	{
 		header = _header;
-		readfd = 0;
+		if (readfd) {
+			close(readfd);
+			readfd = 0;
+		}
 		fullfilled = true;
 		pid = 0;
 		useread = false;
@@ -135,10 +138,15 @@ class Response
 
 			waitpid(pid, &status, 0);
 			if (WEXITSTATUS(status))
+			{
+				std::cerr << "unexpected exit code (" << WEXITSTATUS(status) << ") from the cgi" << std::endl;
 				setError(500, _error);
-			return ;
+				close(readfd);
+				readfd = 0;
+			}
+			return (false);
 		}
-		if (ret == -1 || ret == 0)
+		if (ret == -1)
 			return (false);
 		buf[ret] = '\0';
 		body += buf;

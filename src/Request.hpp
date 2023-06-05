@@ -47,7 +47,6 @@ class Request {
 		{
 			std::string line;
 			std::stringstream	ss(chunkedData);
-			size_t length = 0;
 
 			std::getline(ss, line);
 			size_t chunkSize = strtol(line.c_str(), NULL, 16);
@@ -66,7 +65,6 @@ class Request {
 				if (currChunkSize == chunkSize && std::getline(ss, line))
 				{
 					chunkSize = strtol(line.c_str(), NULL, 16);
-					length += currChunkSize;
 					currChunkSize = 0;
 				}
 			}

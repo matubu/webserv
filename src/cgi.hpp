@@ -82,8 +82,7 @@ void handleCgi(
 								const_cast<char *>(uri.c_str()), 0 };
 
 		execve(cgi.c_str(), argv, env.to_envp());
-		close(0);
-		close(1);
+		perror("could not start cgi");
 		exit(1);
 	}
 	else

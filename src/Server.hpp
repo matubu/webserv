@@ -225,6 +225,9 @@ class Server {
 				if (evt.flags & EV_ERROR)
 				{
 					server->info("error on fd " + atos(evt.ident) + " " + strerror(evt.data));
+					close(evt.ident);
+					if (evt.udata)
+						close((uintptr_t)evt.udata);
 					continue ;
 				}
 				if (evt.ident == (uintptr_t)sock)
@@ -251,7 +254,11 @@ class Server {
 				if (evt.udata)
 				{
 					server->info("read pipe");
-					if (server->ctx.count((uintptr_t)evt.udata) && !server->ctx[(uintptr_t)evt.udata].response.readFd())
+					if (!server->ctx.count((uintptr_t)evt.udata)) {
+						close(evt.ident);
+						continue ;
+					}
+					if (!server->ctx[(uintptr_t)evt.udata].response.readFd())
 					{
 						server->info("readfd ok");
 						change_lst.resize(change_lst.size() + 1);

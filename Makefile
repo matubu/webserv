@@ -1,3 +1,5 @@
+MAKEFLAGS += -j16
+
 FLAG = -pthread -Wall -Wextra -Werror -std=c++98 -O3
 SRCS = main.cpp
 OBJS = $(patsubst %.cpp,bin/%.o,$(SRCS))
@@ -31,7 +33,9 @@ clean:
 fclean: clean
 	@printf "$(RED)● Removing binary ⚙️ $(EOC)\n"
 	@rm -rf $(NAME)
-re: fclean all
+re:
+	make fclean
+	make all
 
 siege_install:
 	curl -C - -O http://download.joedog.org/siege/siege-latest.tar.gz
