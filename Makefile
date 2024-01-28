@@ -1,6 +1,6 @@
 MAKEFLAGS += -j16
 
-FLAG = -pthread -Wall -Wextra -Werror -std=c++98 -O3
+CFLAGS += -pthread -Wall -Wextra -Werror -std=c++17 -O3
 SRCS = main.cpp
 OBJS = $(patsubst %.cpp,bin/%.o,$(SRCS))
 NAME = webserv
@@ -19,11 +19,11 @@ HEADERS				= $(addprefix $(FOLDER_HEADER),$(HEADER_FILES))
 bin/%.o: src/%.cpp $(HEADERS)
 	@printf "$(BLU)● Compiling $< 🔧$(EOC)\n"
 	@mkdir -p bin
-	@clang++ $(FLAG) -c $< -o $@
+	@clang++ $(CFLAGS) -c $< -o $@
 all: $(NAME)
 $(NAME): $(OBJS)
 	@printf "$(GRE)● Compiling $(NAME) ⚙️ $(EOC)\n"
-	@clang++ $(FLAG) $(OBJS) -o $(NAME)
+	@clang++ $(CFLAGS) $(LDFLAGS) $(OBJS) -o $(NAME)
 	@printf "$(GRE)● done. ✅ $(EOC)\n"
 run: all
 	./$(NAME)

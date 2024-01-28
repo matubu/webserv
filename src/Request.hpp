@@ -129,7 +129,7 @@ class Request {
 		std::vector<std::string>	req = split(request);
 		if (req.size() != 3) throw 400;
 		type = req[0];
-		url = urlsanitize(req[1]);
+		url = sanitizeUrl(req[1]);
 		query = getQuery(req[1]);
 		protocol = trim(req[2], "\r");
 		if (protocol != "HTTP/1.1")
@@ -161,7 +161,7 @@ class Request {
 			init(raw, name);
 		else
 			content.appendRaw(raw);
-		if (content.raw.size() > static_cast<size_t>(((headers.count("Content-Length")) 
+		if (content.raw.size() > static_cast<size_t>(((headers.count("Content-Length"))
 			? atoi(headers["Content-Length"].c_str()) : 0)))
 				throw 413;
 	}
@@ -169,7 +169,7 @@ class Request {
 
 
 	bool ended() const { return (!empty && content.ended); }
-	
+
 	Request() : empty(true) {}
 	~Request() {}
 };

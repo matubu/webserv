@@ -1,8 +1,10 @@
 #pragma once
 
+#include <sys/wait.h>
+
 #include "utils.hpp"
 #include "HttpCode.hpp"
-	
+
 const	std::string g_ferrorpage = ftos(DEFAULT_ERROR_FILE);
 
 const std::string	g_fautoindex = ftos(AUTOINDEX_TEMPLATE_FILE);

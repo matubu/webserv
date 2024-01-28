@@ -119,7 +119,7 @@ bool	isIn(E elm, size_t n, T first ...)
 {
 	va_list		args;
 	va_start(args, first);
-	
+
 	while (n--)
 	{
 		if (elm == first)
@@ -212,7 +212,7 @@ struct casecomp
 std::string	cwd()
 {
 	char	cwd[PATH_MAX];
-	if (getwd(cwd) != NULL)
+	if (getcwd(cwd, sizeof(cwd)) != NULL)
 		return (std::string(cwd));
 	return (std::string());
 }
@@ -230,7 +230,7 @@ bool	isip(const std::string &host)
 	return (host.find_first_not_of("0123456789.") == std::string::npos);
 }
 
-std::string	urlsanitize(std::string url)
+std::string	sanitizeUrl(std::string url)
 {
 	size_t end = url.find_first_of("#?");
 	if (end != std::string::npos) url = url.substr(0, end);
